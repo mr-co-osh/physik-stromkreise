@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Glossar · Stromkreise</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .g-group { display: flex; flex-direction: column; gap: 10px; }
+  .g-group h2 { font-size: 22px; padding-bottom: 6px; border-bottom: 2px solid var(--blue); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+  .g-group h2 span { font-size: 14px; font-weight: 400; color: var(--muted); }
+  .g-list { display: flex; flex-direction: column; }
+  /* kompakte Liste: Begriff und Kürzel, Antippen klappt Erklärung und Beispiel auf */
+  .g-row { border-bottom: 1px solid var(--line); }
+  .g-row summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 10px 4px; min-height: 46px; }
+  .g-row summary::-webkit-details-marker { display: none; }
+  .g-row summary::before { content: ""; flex: none; border: 5px solid transparent; border-left: 7px solid var(--blue); border-right: 0; transition: transform .15s; }
+  .g-row[open] summary::before { transform: rotate(90deg); }
+  .g-row summary b { font-size: 17px; color: var(--ink); }
+  .g-row summary .k { color: var(--blue); font-weight: 700; font-size: 15px; }
+  .g-row summary .g-meta { margin-left: auto; }
+  .g-row .g-body { padding: 0 6px 12px 21px; display: flex; flex-direction: column; gap: 6px; max-width: 75ch; }
+  .g-row summary:hover b { color: var(--blue); }
+  .g-item { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .g-term { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .g-term h3 { font-size: 20px; }
+  .g-term h3 small { color: var(--blue); font-size: .8em; margin-left: 6px; }
+  .g-meta { display: flex; gap: 4px; align-items: center; font-size: 13px; color: var(--muted); }
+  .g-ex { font-size: 15px; color: var(--muted); }
+  .g-ex b { color: var(--green-d); }
+  .count { font-size: 15px; color: var(--muted); }
+  mark { background: var(--warn-soft); color: inherit; border-radius: 3px; padding: 0 1px; }
+</style>
+</head>
+<body>
+<header class="band band-mini"><div class="wrap"><a class="back" href="./">← Stromkreise</a><h1>Glossar</h1></div></header>
+<main class="wrap">
+  <section class="page-intro" aria-label="Suche und Filter">
+    <label class="sr" for="q">Begriff suchen</label>
+    <input class="field" id="q" type="search" placeholder="Begriff suchen, z. B. Reihenschaltung" autocomplete="off">
+    <p class="count"><span id="count"></span> · <a href="fachwort-trainer.html">im Fachwort-Trainer üben →</a></p>
+  </section>
+  <div>
+    <div class="reiter" role="tablist" aria-label="Phasen" id="reiter" style="--n:4"></div>
+    <div class="mappe" role="tabpanel" id="liste"></div>
+  </div>
+</main>
+<script src="data/site.js"></script>
+<script src="data/glossar.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  var A = window.App, S = window.SITE, G = window.GLOSSAR, $ = function (id) { return document.getElementById(id); };
+  var NAMES = {}; S.bereiche.forEach(function (b) { NAMES[b.id] = b; });
+  /* Reiter = Phasen; alte Links auf einen Bereich (#formen) öffnen dessen Phase */
+  var sel = 1;
+  function fromHash() { var h = (location.hash || '').slice(1), m = /^phase(\d)$/.exec(h); sel = m ? +m[1] : NAMES[h] ? NAMES[h].phase : A.load('glossar-reiter', 1); return h; }
+  function norm(s) { return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  function hi(html, q) {
+    if (!q) return html;
+    var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(?![^<]*>)', 'gi');
+    return html.replace(re, '<mark>$1</mark>');
+  }
+  function render(jump) {
+    var q = $('q').value.trim();
+    var hits = G.filter(function (t) { return !q || norm(t.b + ' ' + (t.k || '') + ' ' + t.e).indexOf(norm(q)) >= 0; });
+    var per = {}; hits.forEach(function (t) { var p = NAMES[t.r].phase; per[p] = (per[p] || 0) + 1; });
+    $('reiter').innerHTML = S.phasen.map(function (p) {
+      return '<button type="button" role="tab" data-p="' + p.n + '" aria-controls="liste" aria-selected="' + (!q && p.n === sel) + '" style="--pc:var(--p' + p.n + ')">Phase ' + p.n +
+        '<small>' + (q ? (per[p.n] || 0) + ' Treffer' : A.esc(p.name)) + '</small></button>';
+    }).join('');
+    $('count').textContent = q ? hits.length + (hits.length === 1 ? ' Begriff gefunden (alle Phasen)' : ' Begriffe gefunden (alle Phasen)') : G.length + ' Begriffe';
+    var html = S.bereiche.filter(function (b) { return q || b.phase === sel; }).map(function (b) {
+      var list = hits.filter(function (t) { return t.r === b.id; });
+      if (!list.length) return '';
+      list.sort(function (x, y) { return x.b.localeCompare(y.b, 'de'); });
+      return '<section class="g-group" id="g-' + b.id + '"><h2>' + A.esc(b.titel) + '<span>Phase ' + b.phase + ' · ' + b.ds + '</span></h2><div class="g-list">' +
+        list.map(function (t) {
+          return '<details class="g-row"' + (q ? ' open' : '') + '><summary><b>' + hi(A.esc(t.b), q) + '</b>' + (t.k ? '<span class="k">' + A.fmt(t.k) + '</span>' : '') +
+            '<span class="g-meta">' + (t.n === 'stern' ? '<span class="tag star">★</span>' : '<span class="tag">Basis</span>') + ' DS ' + A.esc(t.ds) + '</span></summary>' +
+            '<div class="g-body"><p>' + hi(A.fmtM(t.e, true), q) + '</p><p class="g-ex"><b>Beispiel:</b> ' + A.fmtM(t.s, true) + '</p></div></details>';
+        }).join('') + '</div></section>';
+    }).join('');
+    $('liste').innerHTML = html || '<p class="muted">Kein Begriff gefunden. Prüfe die Schreibweise.</p>';
+    if (jump) { var el = document.getElementById('g-' + jump); if (el) el.scrollIntoView(); }
+  }
+  $('reiter').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    sel = +b.dataset.p; $('q').value = ''; A.save('glossar-reiter', sel);
+    try { history.replaceState(null, '', '#phase' + sel); } catch (err) { }
+    render();
+  });
+  $('q').addEventListener('input', function () { render(); });
+  window.addEventListener('hashchange', function () { render(fromHash()); });
+  render(fromHash());
+})();
+</script>
+
+<!-- STANDARDS.md Abschnitt 4: Seitenfuß -->
+<style>
+.stdfuss{display:block;clear:both;margin:32px 0 0;padding:14px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));border-top:1px solid rgba(128,128,128,.35);font:12.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:inherit;text-align:left;position:relative;z-index:1}
+.stdfuss *{box-sizing:border-box}
+.stdfuss p{margin:0 0 8px;max-width:72ch}
+.stdfuss .stdfuss-row{display:flex;flex-wrap:wrap;gap:0 24px;align-items:center}
+.stdfuss .stdfuss-row button{font:inherit;font-weight:700;color:inherit;background:none;border:0;padding:5px 0;min-height:30px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.stdfuss .stdfuss-row button::before{content:"";border:4.5px solid transparent;border-left:6px solid currentColor;border-right:0;transition:transform .15s}
+.stdfuss .stdfuss-row button[aria-expanded="true"]::before{transform:rotate(90deg)}
+.stdfuss .stdfuss-row button[aria-expanded="true"]{text-decoration:underline;text-underline-offset:3px}
+.stdfuss .stdfuss-panel{max-width:72ch;margin-top:4px}
+.stdfuss .stdfuss-panel[hidden]{display:none}
+.stdfuss ul{margin:4px 0 8px;padding-left:20px}
+.stdfuss li{margin:3px 0}
+.stdfuss a{color:inherit;text-decoration:underline}
+.stdfuss .stdfuss-hint{opacity:.75;font-size:12px}
+</style>
+<footer class="stdfuss" lang="de">
+<p>Eigenes Unterrichtsmaterial. Kein offizielles Material der Bremer Bildungsbehörde. Dein Fortschritt wird nur in diesem Browser gespeichert.</p>
+<div class="stdfuss-row">
+<button type="button" aria-expanded="false" aria-controls="stdfuss-p1">Datenschutz</button>
+<button type="button" aria-expanded="false" aria-controls="stdfuss-p2">Impressum</button>
+<button type="button" aria-expanded="false" aria-controls="stdfuss-p3">Schriftlizenzen</button>
+</div>
+<div class="stdfuss-panel" id="stdfuss-p1" hidden>
+<ul>
+<li><b>Keine Datensammlung:</b> Diese Seite erhebt keine personenbezogenen Daten. Keine Anmeldung, keine Cookies, kein Tracking, keine Formulare, die Daten verschicken.</li>
+<li><b>Speicherung nur im Browser:</b> Fortschritt und Eingaben werden höchstens im Speicher deines Browsers auf diesem Gerät abgelegt (localStorage) und nicht übertragen. Du kannst sie in den Einstellungen deines Browsers löschen.</li>
+<li><b>Hosting:</b> Die Seite liegt bei GitHub Pages (GitHub, Inc., USA). GitHub verarbeitet beim Aufruf technisch notwendige Daten wie deine IP-Adresse. <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a></li>
+<li><b>Nichts von fremden Servern:</b> Schriften, Skripte und Bilder werden von dieser Seite selbst geladen.</li>
+<li><b>Deine Rechte:</b> Nach der DSGVO hast du das Recht auf Auskunft, Berichtigung, Löschung und Einschränkung der Verarbeitung sowie auf Beschwerde bei einer Datenschutz-Aufsichtsbehörde.</li>
+<li><b>Verantwortlich:</b> siehe Impressum.</li>
+<li><b>Datenschutzbeauftragter:</b> datenschutz nord GmbH, Konsul-Smidt-Straße 88, 28217 Bremen, office@datenschutz-nord.de</li>
+</ul> <a href="datenschutz.html">Ausführliche Fassung</a>
+</div>
+<div class="stdfuss-panel" id="stdfuss-p2" hidden>
+<p><b>Oberschule an der Hermannsburg</b><br>Hermannsburg 32f<br>28259 Bremen<br>E-Mail: 505@schule.bremen.de</p>
+<p>Vertreten durch den Schulleiter Achim Kaschub</p>
+</div>
+<div class="stdfuss-panel" id="stdfuss-p3" hidden>
+<p>Alle Schriften werden von dieser Seite selbst geladen, ohne Verbindung zu Google oder anderen Schriftdiensten. Sie stehen unter der SIL Open Font License 1.1 und wurden nicht verändert.</p>
+<ul><li><b>Carlito</b> – Copyright 2013 The Carlito Project Authors, with Reserved Font Name &quot;Carlito&quot;</li><li><b>Big Shoulders Display</b> – Copyright 2019 The Big Shoulders Project Authors</li><li><b>Big Shoulders Stencil Display</b> – Copyright 2019 The Big Shoulders Project Authors</li><li><b>IBM Plex Sans</b> – Copyright © 2017 IBM Corp. with Reserved Font Name &quot;Plex&quot;</li><li><b>IBM Plex Mono</b> – Copyright © 2017 IBM Corp. with Reserved Font Name &quot;Plex&quot;</li><li><b>Barlow Condensed</b> – Copyright 2017 The Barlow Project Authors</li><li><b>JetBrains Mono</b> – Copyright 2020 The JetBrains Mono Project Authors</li><li><b>Source Sans 3</b> – Copyright 2010-2024 Adobe, with Reserved Font Name &#x27;Source&#x27;. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.</li></ul>
+<a href="assets/fonts/LIZENZEN.txt" target="_blank" rel="noopener">Vollständiger Lizenztext</a> (öffnet in neuem Tab)
+</div>
+<noscript><style>.stdfuss .stdfuss-panel[hidden]{display:block}.stdfuss .stdfuss-row{display:none}</style></noscript>
+<script>(function(){var b=document.querySelectorAll('.stdfuss-row button');b.forEach(function(x){x.addEventListener('click',function(){var on=x.getAttribute('aria-expanded')!=='true';b.forEach(function(y){y.setAttribute('aria-expanded','false');document.getElementById(y.getAttribute('aria-controls')).hidden=true;});if(on){x.setAttribute('aria-expanded','true');document.getElementById(x.getAttribute('aria-controls')).hidden=false;}});});})();</script>
+</footer>
+<script src="assets/vollbild.js"></script>
+</body>
+</html>

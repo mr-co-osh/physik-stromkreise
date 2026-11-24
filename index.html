@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stromkreise · Physik 9/10</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Lernseite zur Reihe Stromkreise, Physik 9/10: Übungen, Trainer und Simulationen.">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="band">
+  <div class="wrap">
+    <div class="eyebrow" id="kopf"></div>
+    <h1 id="titel"></h1>
+    <p class="lead" id="leitfrage"></p>
+  </div>
+</header>
+
+<main class="wrap">
+  <section aria-labelledby="h-werkzeuge">
+    <div class="sec-head"><h2 id="h-werkzeuge">Werkzeuge</h2><span class="muted">Nachschlagen, üben, vorbereiten</span></div>
+    <div class="tools" id="werkzeuge"></div>
+  </section>
+
+  <section aria-labelledby="h-bereiche">
+    <div class="sec-head">
+      <h2 id="h-bereiche">Themenbereiche</h2>
+      <div class="legend">
+        <span><i class="tag">Basis</i> für alle</span>
+        <span><i class="tag star">★</i> erweitertes Niveau</span>
+        <span><i class="tag ein">Einstieg</i> auch im Einstiegsmodus</span>
+        <span><i class="tag lock">Code</i> Simulation mit Freischalt-Code</span>
+      </div>
+    </div>
+    <div>
+      <div class="reiter" role="tablist" aria-label="Phasen der Reihe" id="phasen" style="--n:4"></div>
+      <div class="mappe" role="tabpanel" id="bereich-mappe"><div class="areas" id="bereiche"></div></div>
+    </div>
+  </section>
+</main>
+
+<section class="wrap" aria-label="Lernstand" style="padding-block:8px 0;font-size:14px;color:var(--muted)">Physik 9/10 · Bildungsplan NaWi Oberschule Bremen 08/2026 · <button class="linkbtn" id="reset" type="button">Lernstand löschen</button>
+      <span id="reset-ask" hidden> Wirklich alles löschen?
+        <button class="linkbtn" id="reset-yes" type="button">Ja, löschen</button>
+        <button class="linkbtn" id="reset-no" type="button">Abbrechen</button></span>
+      <span id="reset-done" hidden> Gelöscht.</span></section>
+
+<script src="data/site.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  var S = window.SITE, A = window.App, $ = function (id) { return document.getElementById(id); };
+  $('kopf').textContent = S.fach + ' · ' + S.rahmen;
+  $('titel').textContent = S.titel;
+  $('leitfrage').textContent = S.leitfrage;
+
+
+  $('werkzeuge').innerHTML = S.werkzeuge.map(function (w) {
+    var inner = A.icon(w.id) + '<h3>' + A.esc(w.titel) + '</h3><p>' + A.esc(w.text) + '</p>' + (w.href ? '' : '<span class="tag soon" style="align-self:flex-start">in Arbeit</span>');
+    return w.href ? '<a class="tool" href="' + w.href + '">' + inner + '</a>' : '<div class="tool soon">' + inner + '</div>';
+  }).join('');
+
+  var DONE = A.load('uebungen-status', {});
+  var PC = { 1: 'var(--p1)', 2: 'var(--p2)', 3: 'var(--p3)', 4: 'var(--p4)' };
+  function tags(it) {
+    var t = [];
+    if (it.n === 'basis' || it.n === 'beide') t.push('<span class="tag">Basis</span>');
+    if (it.n === 'stern' || it.n === 'beide') t.push('<span class="tag star" title="erweitertes Niveau">★</span>');
+    if (it.ein) t.push('<span class="tag ein">Einstieg</span>');
+    if (it.lock) t.push('<span class="tag lock">Code</span>');
+    if (it.open) t.push('<span class="tag open">frei</span>');
+    if (!it.href) t.push('<span class="tag soon">in Arbeit</span>');
+    var m = /^uebung\.html#(.+)$/.exec(it.href || ''); if (m && DONE[m[1]] === 100) t.push('<span class="tag open">✓ geschafft</span>');
+    return '<span class="tags">' + t.join('') + '</span>';
+  }
+  /* Themenbereiche als Mappe mit Phasen-Reitern; die zuletzt gewählte Phase bleibt im Browser gemerkt */
+  var phase = A.load('phase-reiter', 1);
+  function zeige(n) {
+    phase = n; A.save('phase-reiter', n);
+    $('phasen').innerHTML = S.phasen.map(function (p) {
+      return '<button type="button" role="tab" data-p="' + p.n + '" aria-controls="bereich-mappe" aria-selected="' + (p.n === n) + '" style="--pc:var(--p' + p.n + ')">Phase ' + p.n +
+        '<small>' + A.esc(p.name) + ' · ' + p.ds + '</small></button>';
+    }).join('');
+    var bs = S.bereiche.filter(function (b) { return b.phase === n; });
+    /* Die Seite wächst mit dem Unterricht: Phasen ohne Inhalte zeigen nur einen Hinweis */
+    $('bereiche').innerHTML = bs.length ? bs.map(area).join('') : '<p style="color:var(--muted);padding:18px 4px;margin:0">Kommt später im Unterricht.</p>';
+  }
+  $('phasen').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) zeige(+b.dataset.p); });
+  function area(b) {
+    var list = b.items.map(function (it) {
+      var ic = it.lock ? A.icon('lock') : A.icon(it.typ);
+      var body = ic + '<span class="t">' + A.fmt(it.titel) + '<span class="k">' + A.fmt(it.kurz) + '</span></span>' + tags(it);
+      var ext = it.typ === 'extern' ? ' target="_blank" rel="noopener"' : '';
+      return '<li>' + (it.href ? '<a class="item" href="' + it.href + '"' + ext + '>' + body + '</a>' : '<div class="item soon">' + body + '</div>') + '</li>';
+    }).join('');
+    return '<article class="area" style="--pc:' + PC[b.phase] + '"><div class="area-head"><div class="eyebrow">Phase ' + b.phase + ' · ' + b.ds +
+      '</div><h3>' + A.esc(b.titel) + '</h3><p>' + A.esc(b.text) + '</p></div><ul class="area-list">' + list + '</ul></article>';
+  }
+  zeige(phase);
+
+  $('reset').onclick = function () { $('reset-ask').hidden = false; $('reset').hidden = true; };
+  $('reset-no').onclick = function () { $('reset-ask').hidden = true; $('reset').hidden = false; };
+  $('reset-yes').onclick = function () { A.clearAll(); $('reset-ask').hidden = true; $('reset-done').hidden = false; };
+})();
+</script>
+
+<!-- STANDARDS.md Abschnitt 4: Seitenfuß -->
+<style>
+.stdfuss{display:block;clear:both;margin:32px 0 0;padding:14px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));border-top:1px solid rgba(128,128,128,.35);font:12.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:inherit;text-align:left;position:relative;z-index:1}
+.stdfuss *{box-sizing:border-box}
+.stdfuss p{margin:0 0 8px;max-width:72ch}
+.stdfuss .stdfuss-row{display:flex;flex-wrap:wrap;gap:0 24px;align-items:center}
+.stdfuss .stdfuss-row button{font:inherit;font-weight:700;color:inherit;background:none;border:0;padding:5px 0;min-height:30px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.stdfuss .stdfuss-row button::before{content:"";border:4.5px solid transparent;border-left:6px solid currentColor;border-right:0;transition:transform .15s}
+.stdfuss .stdfuss-row button[aria-expanded="true"]::before{transform:rotate(90deg)}
+.stdfuss .stdfuss-row button[aria-expanded="true"]{text-decoration:underline;text-underline-offset:3px}
+.stdfuss .stdfuss-panel{max-width:72ch;margin-top:4px}
+.stdfuss .stdfuss-panel[hidden]{display:none}
+.stdfuss ul{margin:4px 0 8px;padding-left:20px}
+.stdfuss li{margin:3px 0}
+.stdfuss a{color:inherit;text-decoration:underline}
+.stdfuss .stdfuss-hint{opacity:.75;font-size:12px}
+</style>
+<footer class="stdfuss" lang="de">
+<p>Eigenes Unterrichtsmaterial. Kein offizielles Material der Bremer Bildungsbehörde. Dein Fortschritt wird nur in diesem Browser gespeichert.</p>
+<div class="stdfuss-row">
+<button type="button" aria-expanded="false" aria-controls="stdfuss-p1">Datenschutz</button>
+<button type="button" aria-expanded="false" aria-controls="stdfuss-p2">Impressum</button>
+<button type="button" aria-expanded="false" aria-controls="stdfuss-p3">Schriftlizenzen</button>
+</div>
+<div class="stdfuss-panel" id="stdfuss-p1" hidden>
+<ul>
+<li><b>Keine Datensammlung:</b> Diese Seite erhebt keine personenbezogenen Daten. Keine Anmeldung, keine Cookies, kein Tracking, keine Formulare, die Daten verschicken.</li>
+<li><b>Speicherung nur im Browser:</b> Fortschritt und Eingaben werden höchstens im Speicher deines Browsers auf diesem Gerät abgelegt (localStorage) und nicht übertragen. Du kannst sie in den Einstellungen deines Browsers löschen.</li>
+<li><b>Hosting:</b> Die Seite liegt bei GitHub Pages (GitHub, Inc., USA). GitHub verarbeitet beim Aufruf technisch notwendige Daten wie deine IP-Adresse. <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a></li>
+<li><b>Nichts von fremden Servern:</b> Schriften, Skripte und Bilder werden von dieser Seite selbst geladen.</li>
+<li><b>Deine Rechte:</b> Nach der DSGVO hast du das Recht auf Auskunft, Berichtigung, Löschung und Einschränkung der Verarbeitung sowie auf Beschwerde bei einer Datenschutz-Aufsichtsbehörde.</li>
+<li><b>Verantwortlich:</b> siehe Impressum.</li>
+<li><b>Datenschutzbeauftragter:</b> datenschutz nord GmbH, Konsul-Smidt-Straße 88, 28217 Bremen, office@datenschutz-nord.de</li>
+</ul> <a href="datenschutz.html">Ausführliche Fassung</a>
+</div>
+<div class="stdfuss-panel" id="stdfuss-p2" hidden>
+<p><b>Oberschule an der Hermannsburg</b><br>Hermannsburg 32f<br>28259 Bremen<br>E-Mail: 505@schule.bremen.de</p>
+<p>Vertreten durch den Schulleiter Achim Kaschub</p>
+</div>
+<div class="stdfuss-panel" id="stdfuss-p3" hidden>
+<p>Alle Schriften werden von dieser Seite selbst geladen, ohne Verbindung zu Google oder anderen Schriftdiensten. Sie stehen unter der SIL Open Font License 1.1 und wurden nicht verändert.</p>
+<ul><li><b>Carlito</b> – Copyright 2013 The Carlito Project Authors, with Reserved Font Name &quot;Carlito&quot;</li><li><b>Big Shoulders Display</b> – Copyright 2019 The Big Shoulders Project Authors</li><li><b>Big Shoulders Stencil Display</b> – Copyright 2019 The Big Shoulders Project Authors</li><li><b>IBM Plex Sans</b> – Copyright © 2017 IBM Corp. with Reserved Font Name &quot;Plex&quot;</li><li><b>IBM Plex Mono</b> – Copyright © 2017 IBM Corp. with Reserved Font Name &quot;Plex&quot;</li><li><b>Barlow Condensed</b> – Copyright 2017 The Barlow Project Authors</li><li><b>JetBrains Mono</b> – Copyright 2020 The JetBrains Mono Project Authors</li><li><b>Source Sans 3</b> – Copyright 2010-2024 Adobe, with Reserved Font Name &#x27;Source&#x27;. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.</li></ul>
+<a href="assets/fonts/LIZENZEN.txt" target="_blank" rel="noopener">Vollständiger Lizenztext</a> (öffnet in neuem Tab)
+</div>
+<noscript><style>.stdfuss .stdfuss-panel[hidden]{display:block}.stdfuss .stdfuss-row{display:none}</style></noscript>
+<script>(function(){var b=document.querySelectorAll('.stdfuss-row button');b.forEach(function(x){x.addEventListener('click',function(){var on=x.getAttribute('aria-expanded')!=='true';b.forEach(function(y){y.setAttribute('aria-expanded','false');document.getElementById(y.getAttribute('aria-controls')).hidden=true;});if(on){x.setAttribute('aria-expanded','true');document.getElementById(x.getAttribute('aria-controls')).hidden=false;}});});})();</script>
+</footer>
+<script src="assets/vollbild.js"></script>
+</body>
+</html>

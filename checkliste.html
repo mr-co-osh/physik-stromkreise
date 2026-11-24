@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Checkliste · Stromkreise</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .sum { display: flex; gap: 10px; flex-wrap: wrap; }
+  .sum div { flex: 1 1 140px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .sum b { display: block; font-size: 28px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .sum .s1 b { color: var(--green-d); } .sum .s3 b { color: var(--bad); }
+  .group { display: flex; flex-direction: column; gap: 8px; }
+  .group h2 { font-size: 22px; padding-bottom: 6px; border-bottom: 2px solid var(--blue); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+  .group.star h2 { border-color: var(--green); color: var(--green-d); }
+  .group h2 span { font-size: 14px; font-weight: 400; color: var(--muted); }
+  .row { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; }
+  @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
+  .row .txt { font-size: 18px; color: var(--ink); }
+  .row .txt::before { content: "Ich kann "; color: var(--muted); }
+  .row .meta { grid-column: 1; display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+  .row .meta a { font-weight: 700; }
+  .rate { grid-row: 1 / span 2; grid-column: 2; display: flex; gap: 6px; }
+  @media (max-width: 640px) { .rate { grid-row: auto; grid-column: 1; } }
+  .rate button { font: 700 15px var(--f-text); min-height: 44px; min-width: 88px; padding: 6px 10px; border-radius: 10px; border: 2px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; }
+  .rate button[aria-pressed="true"][data-v="1"] { border-color: var(--green-d); background: var(--mint); color: var(--green-d); }
+  .rate button[aria-pressed="true"][data-v="2"] { border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
+  .rate button[aria-pressed="true"][data-v="3"] { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
+  .row.r1 { border-left: 6px solid var(--green-d); } .row.r2 { border-left: 6px solid var(--warn); } .row.r3 { border-left: 6px solid var(--bad); }
+  .tips { background: var(--surface); border: 1.5px solid var(--blue); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .tips h2 { font-size: 20px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tabs a { font: 700 16px var(--f-text); text-decoration: none; padding: 10px 16px; border-radius: 10px; min-height: 44px; display: inline-flex; align-items: center; border: 2px solid var(--line); color: var(--text); background: var(--surface); }
+  .tabs a[aria-current="page"] { border-color: var(--blue); background: var(--blue); color: #fff; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tabs a[aria-current="page"] { color: #0B1824; } }
+  :root[data-theme="dark"] .tabs a[aria-current="page"] { color: #0B1824; }
+  .tips ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; }
+</style>
+</head>
+<body>
+<header class="band band-mini"><div class="wrap"><a class="back" href="./">← Stromkreise</a><h1>Checkliste</h1></div></header>
+<main class="wrap">
+  <section class="page-intro"><nav class="tabs" id="tabs" aria-label="Prüfung wählen"></nav><h2 id="titel" style="font-size:26px"></h2><p id="info"></p><div class="sum" id="sum"></div></section>
+  <div id="gruppen" style="display:flex;flex-direction:column;gap:28px"></div>
+  <section class="tips" aria-labelledby="h-tipps"><h2 id="h-tipps">So bereitest du dich vor</h2><ol id="tipps"></ol>
+    <p><a id="trainlink" href="test-training/index.html">Zu „Fit für die Lernkontrolle“ mit Beispielaufgaben →</a></p></section>
+  <p class="muted" style="font-size:14px">Deine Einschätzung bleibt nur auf diesem Gerät. <button class="linkbtn" id="reset" type="button">Alle zurücksetzen</button></p>
+</main>
+<script src="data/site.js"></script>
+<script src="data/checkliste.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  var A = window.App, ALL = window.CHECKLISTEN, $ = function (id) { return document.getElementById(id); };
+  var ALT = { kurztest: 'lk1', klassenarbeit: 'lk2' };
+  var key = location.hash.slice(1); key = ALT[key] || key; if (!ALL[key]) key = 'lk1';
+  var C = ALL[key];
+  var LBL = { 1: 'sicher', 2: 'fast', 3: 'noch nicht' };
+  var st = A.load('checkliste', {});
+  function render() {
+    C = ALL[key];
+    $('tabs').innerHTML = Object.keys(ALL).map(function (k) { return '<a href="#' + k + '"' + (k === key ? ' aria-current="page"' : '') + '>' + A.esc(ALL[k].tab) + '</a>'; }).join('');
+    $('titel').textContent = C.titel; $('info').textContent = C.info; $('trainlink').href = C.training || '#'; $('trainlink').parentNode.hidden = !C.training;
+    $('tipps').innerHTML = C.tipps.map(function (t) { return '<li>' + A.esc(t) + '</li>'; }).join('');
+    $('gruppen').innerHTML = C.gruppen.map(function (g) {
+      return '<section class="group' + (g.n === 'stern' ? ' star' : '') + '"><h2>' + A.esc(g.titel) + (g.punkte ? '<span>' + g.punkte + ' Punkte in der Arbeit</span>' : '') + '</h2>' +
+        g.items.map(function (it) {
+          var v = st[it.id] || 0;
+          return '<div class="row' + (v ? ' r' + v : '') + '"><div class="txt">' + A.fmt(it.t) + '</div>' +
+            '<div class="rate" role="group" aria-label="Wie sicher bist du?">' + [1, 2, 3].map(function (k) {
+              return '<button type="button" data-id="' + it.id + '" data-v="' + k + '" aria-pressed="' + (v === k) + '">' + LBL[k] + '</button>'; }).join('') + '</div>' +
+            '<div class="meta"><span>Arbeitsblatt: ' + A.esc(it.ab) + '</span>' + it.links.map(function (l) { return '<a href="' + l[1] + '">' + A.esc(l[0]) + ' →</a>'; }).join('') + '</div></div>';
+        }).join('') + '</section>';
+    }).join('');
+    var c = { 0: 0, 1: 0, 2: 0, 3: 0 }, all = 0;
+    C.gruppen.forEach(function (g) { g.items.forEach(function (it) { c[st[it.id] || 0]++; all++; }); });
+    $('sum').innerHTML = '<div class="s1"><b>' + c[1] + '</b>sicher</div><div class="s2"><b>' + c[2] + '</b>fast</div><div class="s3"><b>' + c[3] + '</b>noch nicht</div><div><b>' + c[0] + '</b>von ' + all + ' offen</div>';
+  }
+  $('gruppen').addEventListener('click', function (e) {
+    var b = e.target.closest('.rate button'); if (!b) return;
+    var v = +b.dataset.v; st[b.dataset.id] = st[b.dataset.id] === v ? 0 : v; A.save('checkliste', st); render();
+  });
+  $('reset').onclick = function () { C.gruppen.forEach(function (g) { g.items.forEach(function (it) { delete st[it.id]; }); }); A.save('checkliste', st); render(); };
+  window.addEventListener('hashchange', function () { var h = location.hash.slice(1); if (ALL[h]) { key = h; render(); window.scrollTo(0, 0); } });
+  render();
+})();
+</script>
+
+<!-- STANDARDS.md Abschnitt 4: Seitenfuß -->
+<style>
+.stdfuss{display:block;clear:both;margin:32px 0 0;padding:14px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));border-top:1px solid rgba(128,128,128,.35);font:12.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:inherit;text-align:left;position:relative;z-index:1}
+.stdfuss *{box-sizing:border-box}
+.stdfuss p{margin:0 0 8px;max-width:72ch}
+.stdfuss .stdfuss-row{display:flex;flex-wrap:wrap;gap:0 24px;align-items:center}
+.stdfuss .stdfuss-row button{font:inherit;font-weight:700;color:inherit;background:none;border:0;padding:5px 0;min-height:30px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.stdfuss .stdfuss-row button::before{content:"";border:4.5px solid transparent;border-left:6px solid currentColor;border-right:0;transition:transform .15s}
+.stdfuss .stdfuss-row button[aria-expanded="true"]::before{transform:rotate(90deg)}
+.stdfuss .stdfuss-row button[aria-expanded="true"]{text-decoration:underline;text-underline-offset:3px}
+.stdfuss .stdfuss-panel{max-width:72ch;margin-top:4px}
+.stdfuss .stdfuss-panel[hidden]{display:none}
+.stdfuss ul{margin:4px 0 8px;padding-left:20px}
+.stdfuss li{margin:3px 0}
+.stdfuss a{color:inherit;text-decoration:underline}
+.stdfuss .stdfuss-hint{opacity:.75;font-size:12px}
+</style>
+<footer class="stdfuss" lang="de">
+<p>Eigenes Unterrichtsmaterial. Kein offizielles Material der Bremer Bildungsbehörde. Dein Fortschritt wird nur in diesem Browser gespeichert.</p>
+<div class="stdfuss-row">
+<button type="button" aria-expanded="false" aria-controls="stdfuss-p1">Datenschutz</button>
+<button type="button" aria-expanded="false" aria-controls="stdfuss-p2">Impressum</button>
+<button type="button" aria-expanded="false" aria-controls="stdfuss-p3">Schriftlizenzen</button>
+</div>
+<div class="stdfuss-panel" id="stdfuss-p1" hidden>
+<ul>
+<li><b>Keine Datensammlung:</b> Diese Seite erhebt keine personenbezogenen Daten. Keine Anmeldung, keine Cookies, kein Tracking, keine Formulare, die Daten verschicken.</li>
+<li><b>Speicherung nur im Browser:</b> Fortschritt und Eingaben werden höchstens im Speicher deines Browsers auf diesem Gerät abgelegt (localStorage) und nicht übertragen. Du kannst sie in den Einstellungen deines Browsers löschen.</li>
+<li><b>Hosting:</b> Die Seite liegt bei GitHub Pages (GitHub, Inc., USA). GitHub verarbeitet beim Aufruf technisch notwendige Daten wie deine IP-Adresse. <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a></li>
+<li><b>Nichts von fremden Servern:</b> Schriften, Skripte und Bilder werden von dieser Seite selbst geladen.</li>
+<li><b>Deine Rechte:</b> Nach der DSGVO hast du das Recht auf Auskunft, Berichtigung, Löschung und Einschränkung der Verarbeitung sowie auf Beschwerde bei einer Datenschutz-Aufsichtsbehörde.</li>
+<li><b>Verantwortlich:</b> siehe Impressum.</li>
+<li><b>Datenschutzbeauftragter:</b> datenschutz nord GmbH, Konsul-Smidt-Straße 88, 28217 Bremen, office@datenschutz-nord.de</li>
+</ul> <a href="datenschutz.html">Ausführliche Fassung</a>
+</div>
+<div class="stdfuss-panel" id="stdfuss-p2" hidden>
+<p><b>Oberschule an der Hermannsburg</b><br>Hermannsburg 32f<br>28259 Bremen<br>E-Mail: 505@schule.bremen.de</p>
+<p>Vertreten durch den Schulleiter Achim Kaschub</p>
+</div>
+<div class="stdfuss-panel" id="stdfuss-p3" hidden>
+<p>Alle Schriften werden von dieser Seite selbst geladen, ohne Verbindung zu Google oder anderen Schriftdiensten. Sie stehen unter der SIL Open Font License 1.1 und wurden nicht verändert.</p>
+<ul><li><b>Carlito</b> – Copyright 2013 The Carlito Project Authors, with Reserved Font Name &quot;Carlito&quot;</li><li><b>Big Shoulders Display</b> – Copyright 2019 The Big Shoulders Project Authors</li><li><b>Big Shoulders Stencil Display</b> – Copyright 2019 The Big Shoulders Project Authors</li><li><b>IBM Plex Sans</b> – Copyright © 2017 IBM Corp. with Reserved Font Name &quot;Plex&quot;</li><li><b>IBM Plex Mono</b> – Copyright © 2017 IBM Corp. with Reserved Font Name &quot;Plex&quot;</li><li><b>Barlow Condensed</b> – Copyright 2017 The Barlow Project Authors</li><li><b>JetBrains Mono</b> – Copyright 2020 The JetBrains Mono Project Authors</li><li><b>Source Sans 3</b> – Copyright 2010-2024 Adobe, with Reserved Font Name &#x27;Source&#x27;. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.</li></ul>
+<a href="assets/fonts/LIZENZEN.txt" target="_blank" rel="noopener">Vollständiger Lizenztext</a> (öffnet in neuem Tab)
+</div>
+<noscript><style>.stdfuss .stdfuss-panel[hidden]{display:block}.stdfuss .stdfuss-row{display:none}</style></noscript>
+<script>(function(){var b=document.querySelectorAll('.stdfuss-row button');b.forEach(function(x){x.addEventListener('click',function(){var on=x.getAttribute('aria-expanded')!=='true';b.forEach(function(y){y.setAttribute('aria-expanded','false');document.getElementById(y.getAttribute('aria-controls')).hidden=true;});if(on){x.setAttribute('aria-expanded','true');document.getElementById(x.getAttribute('aria-controls')).hidden=false;}});});})();</script>
+</footer>
+<script src="assets/vollbild.js"></script>
+</body>
+</html>

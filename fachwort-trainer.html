@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fachwort-Trainer · Stromkreise</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .setup { display: flex; flex-direction: column; gap: 12px; }
+  .setup-row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+  .setup-row > .lbl { font-size: 14px; font-weight: 700; color: var(--muted); min-width: 64px; }
+  .trainer { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 20px; align-items: start; }
+  @media (max-width: 820px) { .trainer { grid-template-columns: 1fr; } }
+
+  /* Karteikarte */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); min-height: 340px;
+          display: flex; flex-direction: column; overflow: hidden; }
+  .card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 18px; background: var(--sky); font-size: 14px; color: var(--ink); flex-wrap: wrap; }
+  .card-top b { font-weight: 700; }
+  .card-main { flex: 1; padding: 26px 22px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .term { font-size: clamp(30px, 5vw, 44px); font-weight: 700; color: var(--ink); line-height: 1.1; }
+  .term small { font-size: .55em; color: var(--blue); font-weight: 700; margin-left: 8px; }
+  .prompt { font-size: 15px; font-weight: 700; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+  .expl { font-size: 21px; color: var(--text); line-height: 1.4; }
+  .example { font-size: 18px; color: var(--text); background: var(--mint); border-radius: 10px; padding: 12px 14px; }
+  .example b { color: var(--green-d); }
+  .gap { display: inline-block; min-width: 7ch; border-bottom: 3px solid var(--blue); }
+  .opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+  .opt { font: 700 19px var(--f-text); text-align: left; min-height: 56px; padding: 12px 16px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .opt:hover:not(:disabled) { border-color: var(--blue); }
+  .opt.right { border-color: var(--green-d); background: var(--mint); }
+  .opt.wrong { border-color: var(--bad); background: var(--bad-soft); }
+  .opt:disabled { cursor: default; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: auto; }
+  .feedback { font-weight: 700; font-size: 18px; min-height: 1.5em; }
+  .feedback.ok { color: var(--green-d); } .feedback.bad { color: var(--bad); }
+
+  /* Kasten mit fünf Fächern */
+  .box { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .box h2 { font-size: 18px; }
+  .slots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; align-items: end; height: 120px; }
+  .slot { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; }
+  .slot .bar { width: 100%; border-radius: 6px 6px 2px 2px; background: var(--sky); border: 1.5px solid var(--blue); min-height: 6px; transition: height .3s; }
+  .slot:last-child .bar { background: var(--mint); border-color: var(--green-d); }
+  .slot.cur .bar { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .slot .n { font-size: 15px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .slot .f { font-size: 12px; color: var(--muted); }
+  .rule { font-size: 14px; color: var(--muted); line-height: 1.4; }
+  .progress { font-size: 15px; }
+  .progress b { color: var(--green-d); }
+  @media (prefers-reduced-motion: reduce) { .slot .bar { transition: none; } }
+</style>
+</head>
+<body>
+<header class="band band-mini">
+  <div class="wrap">
+    <a class="back" href="./">← Stromkreise</a>
+    <h1>Fachwort-Trainer</h1>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="setup" aria-label="Einstellungen">
+    <div class="setup-row"><span class="lbl">Üben</span>
+      <div class="seg" id="modus" role="group" aria-label="Übungsart">
+        <button type="button" data-v="karte">Karte umdrehen</button>
+        <button type="button" data-v="begriff">Welcher Begriff?</button>
+        <button type="button" data-v="luecke">Lückensatz</button>
+      </div>
+    </div>
+    <div class="setup-row"><span class="lbl">Niveau</span>
+      <div class="seg" id="niveau" role="group" aria-label="Niveau">
+        <button type="button" data-v="ein">Einstieg</button>
+        <button type="button" data-v="basis">Basis</button>
+        <button type="button" data-v="stern">Basis + ★</button>
+      </div>
+    </div>
+    <div class="setup-row"><span class="lbl">Bereich</span><div class="chips" id="bereich" role="group" aria-label="Bereich"></div></div>
+  </section>
+
+  <div class="trainer">
+    <article class="card" id="karte" aria-live="polite"></article>
+    <aside class="box" aria-labelledby="h-kasten">
+      <h2 id="h-kasten">Dein Vokabelkasten</h2>
+      <div class="slots" id="slots"></div>
+      <p class="progress" id="fortschritt"></p>
+      <p class="rule">Gewusst: Die Karte rückt ein Fach weiter. Nicht gewusst: Sie kommt zurück in Fach 1. Karten aus Fach 1 kommen am häufigsten dran.</p>
+      <div>
+        <button class="linkbtn" id="reset" type="button">Kasten leeren</button>
+        <span id="reset-ask" hidden>Alle Karten zurück in Fach 1?
+          <button class="linkbtn" id="reset-yes" type="button">Ja</button>
+          <button class="linkbtn" id="reset-no" type="button">Nein</button></span>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script src="data/site.js"></script>
+<script src="data/glossar.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  'use strict';
+  var A = window.App, G = window.GLOSSAR, S = window.SITE, $ = function (id) { return document.getElementById(id); };
+  var NAMES = {}; S.bereiche.forEach(function (b) { NAMES[b.id] = b.titel; });
+  var WEIGHT = [0, 16, 8, 4, 2, 1];
+
+  var st = A.load('fachwort-einstellung', { modus: 'karte', niveau: 'basis', bereich: 'alle' });
+  var kasten = A.load('fachwort-kasten', {});      // Begriff -> Fach 1..5
+  var cur = null, last = null, answered = false;
+
+  function fach(t) { return kasten[t.b] || 1; }
+  function pool() {
+    return G.filter(function (t) {
+      if (st.bereich !== 'alle' && t.r !== st.bereich) return false;
+      if (st.niveau === 'ein') return !!t.kern;
+      if (st.niveau === 'basis') return t.n === 'basis';
+      return true;
+    });
+  }
+  function pick() {
+    var p = pool(); if (!p.length) return null;
+    var cand = p.length > 1 ? p.filter(function (t) { return t !== last; }) : p;
+    var sum = cand.reduce(function (s, t) { return s + WEIGHT[fach(t)]; }, 0), r = Math.random() * sum;
+    for (var i = 0; i < cand.length; i++) { r -= WEIGHT[fach(cand[i])]; if (r <= 0) return cand[i]; }
+    return cand[cand.length - 1];
+  }
+  function distractors(t, n, key) {
+    var p = pool().filter(function (x) { return x !== t; });
+    if (p.length < n) p = G.filter(function (x) { return x !== t; });
+    var same = A.shuffle(p.filter(function (x) { return x.r === t.r; })), other = A.shuffle(p.filter(function (x) { return x.r !== t.r; }));
+    var out = [], seen = {}; seen[key(t)] = 1;
+    same.concat(other).forEach(function (x) { if (out.length < n && !seen[key(x)]) { seen[key(x)] = 1; out.push(x); } });
+    return out;
+  }
+  function mask(text, t) {   // Begriff in der Erklärung verdecken
+    var out = A.fmt(text);
+    [t.b, t.k].forEach(function (w) {
+      if (!w || w.length < 2) return;
+      out = out.replace(new RegExp(A.fmt(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '…');
+    });
+    return out;
+  }
+  function gapSentence(t) {
+    var w = t.g || t.b, i = t.s.toLowerCase().indexOf(w.toLowerCase());
+    return A.fmt(t.s.slice(0, i)) + '<span class="gap" aria-label="Lücke"></span>' + A.fmt(t.s.slice(i + w.length));
+  }
+
+  function head(t) {
+    return '<div class="card-top"><span><b>' + A.esc(NAMES[t.r]) + '</b> · DS ' + A.esc(t.ds) + (t.n === 'stern' ? ' · <b style="color:var(--green-d)">★</b>' : '') +
+      '</span><span>Fach ' + fach(t) + ' von 5</span></div>';
+  }
+  function termHtml(t) { return A.esc(t.b) + (t.k ? '<small>' + A.fmt(t.k) + '</small>' : ''); }
+
+  function render() {
+    renderBox();
+    cur = pick(); answered = false;
+    var c = $('karte');
+    if (!cur) { c.innerHTML = '<div class="card-main"><p class="expl">In dieser Auswahl gibt es keine Begriffe. Wähle einen anderen Bereich oder ein anderes Niveau.</p></div>'; return; }
+    last = cur;
+    if (st.modus === 'karte') {
+      c.innerHTML = head(cur) + '<div class="card-main"><div class="prompt">Was bedeutet dieser Begriff?</div><div class="term">' + termHtml(cur) + '</div>' +
+        '<p class="muted">Erkläre ihn laut oder in Gedanken. Dann dreh die Karte um.</p>' +
+        '<div class="actions"><button class="btn" id="flip" type="button">Karte umdrehen</button></div></div>';
+      $('flip').onclick = function () {
+        c.querySelector('.card-main').innerHTML = '<div class="term">' + termHtml(cur) + '</div><p class="expl">' + A.fmt(cur.e) + '</p>' +
+          '<p class="example"><b>Beispiel:</b> ' + A.fmt(cur.s) + '</p>' +
+          '<div class="actions"><button class="btn ok" id="ja" type="button">✓ Gewusst</button><button class="btn no" id="nein" type="button">Noch nicht</button></div>';
+        $('ja').onclick = function () { grade(true); render(); };
+        $('nein').onclick = function () { grade(false); render(); };
+        $('ja').focus();
+      };
+      return;
+    }
+    var n = st.niveau === 'ein' ? 2 : 3, opts, prompt, body;
+    if (st.modus === 'begriff') {
+      opts = A.shuffle([cur].concat(distractors(cur, n, function (x) { return x.b; })));
+      prompt = 'Welcher Begriff passt zur Erklärung?';
+      body = '<p class="expl">' + mask(cur.e, cur) + '</p>';
+    } else {
+      opts = A.shuffle([cur].concat(distractors(cur, n, function (x) { return (x.g || x.b).toLowerCase(); })));
+      prompt = 'Welches Wort gehört in die Lücke?';
+      body = '<p class="expl">' + gapSentence(cur) + '</p>';
+    }
+    c.innerHTML = head(cur) + '<div class="card-main"><div class="prompt">' + prompt + '</div>' + body +
+      '<div class="opts" role="group" aria-label="Antworten">' + opts.map(function (o, i) {
+        var label = st.modus === 'luecke' ? (o.g || o.b) : o.b;
+        return '<button class="opt" type="button" data-i="' + i + '">' + A.esc(label) + '</button>';
+      }).join('') + '</div><p class="feedback" id="fb"></p><div class="actions" id="weiter"></div></div>';
+    c.querySelectorAll('.opt').forEach(function (btn) {
+      btn.onclick = function () {
+        if (answered) return; answered = true;
+        var ok = opts[+btn.dataset.i] === cur;
+        c.querySelectorAll('.opt').forEach(function (b2) { b2.disabled = true; if (opts[+b2.dataset.i] === cur) b2.classList.add('right'); });
+        if (!ok) btn.classList.add('wrong');
+        grade(ok); renderBox();
+        $('fb').className = 'feedback ' + (ok ? 'ok' : 'bad');
+        $('fb').innerHTML = ok ? 'Richtig! Die Karte rückt in Fach ' + fach(cur) + '.' : 'Leider nicht. Richtig ist: ' + A.esc(cur.b) + '. Die Karte kommt zurück in Fach 1.';
+        $('weiter').innerHTML = '<p class="example" style="flex-basis:100%"><b>' + A.esc(cur.b) + ':</b> ' + A.fmt(cur.e) + '</p><button class="btn" id="next" type="button">Nächste Karte</button>';
+        $('next').onclick = render; $('next').focus();
+      };
+    });
+  }
+
+  function grade(ok) { kasten[cur.b] = ok ? Math.min(5, fach(cur) + 1) : 1; A.save('fachwort-kasten', kasten); }
+
+  function renderBox() {
+    var p = pool(), cnt = [0, 0, 0, 0, 0, 0];
+    p.forEach(function (t) { cnt[fach(t)]++; });
+    var max = Math.max.apply(null, cnt.slice(1)) || 1;
+    $('slots').innerHTML = [1, 2, 3, 4, 5].map(function (f) {
+      return '<div class="slot' + (cur && fach(cur) === f ? ' cur' : '') + '"><span class="n">' + cnt[f] + '</span><div class="bar" style="height:' + Math.max(6, Math.round(cnt[f] / max * 80)) + 'px"></div><span class="f">Fach ' + f + '</span></div>';
+    }).join('');
+    $('fortschritt').innerHTML = '<b>' + cnt[5] + '</b> von ' + p.length + ' Begriffen sitzen sicher (Fach 5).';
+  }
+
+  $('bereich').innerHTML = ['alle'].concat(S.bereiche.map(function (b) { return b.id; })).map(function (id) {
+    return '<button class="chip" type="button" data-v="' + id + '">' + (id === 'alle' ? 'Alle' : A.esc(NAMES[id])) + '</button>';
+  }).join('');
+  ['bereich', 'modus', 'niveau'].forEach(function (k) {
+    var el = $(k);
+    el.querySelectorAll('button').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.v === st[k]));
+      b.onclick = function () { st[k] = b.dataset.v; A.save('fachwort-einstellung', st); el.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); }); last = null; render(); };
+    });
+  });
+
+  $('reset').onclick = function () { $('reset-ask').hidden = false; $('reset').hidden = true; };
+  $('reset-no').onclick = function () { $('reset-ask').hidden = true; $('reset').hidden = false; };
+  $('reset-yes').onclick = function () { kasten = {}; A.save('fachwort-kasten', kasten); $('reset-ask').hidden = true; $('reset').hidden = false; render(); };
+
+  render();
+})();
+</script>
+
+<!-- STANDARDS.md Abschnitt 4: Seitenfuß -->
+<style>
+.stdfuss{display:block;clear:both;margin:32px 0 0;padding:14px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));border-top:1px solid rgba(128,128,128,.35);font:12.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:inherit;text-align:left;position:relative;z-index:1}
+.stdfuss *{box-sizing:border-box}
+.stdfuss p{margin:0 0 8px;max-width:72ch}
+.stdfuss .stdfuss-row{display:flex;flex-wrap:wrap;gap:0 24px;align-items:center}
+.stdfuss .stdfuss-row button{font:inherit;font-weight:700;color:inherit;background:none;border:0;padding:5px 0;min-height:30px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.stdfuss .stdfuss-row button::before{content:"";border:4.5px solid transparent;border-left:6px solid currentColor;border-right:0;transition:transform .15s}
+.stdfuss .stdfuss-row button[aria-expanded="true"]::before{transform:rotate(90deg)}
+.stdfuss .stdfuss-row button[aria-expanded="true"]{text-decoration:underline;text-underline-offset:3px}
+.stdfuss .stdfuss-panel{max-width:72ch;margin-top:4px}
+.stdfuss .stdfuss-panel[hidden]{display:none}
+.stdfuss ul{margin:4px 0 8px;padding-left:20px}
+.stdfuss li{margin:3px 0}
+.stdfuss a{color:inherit;text-decoration:underline}
+.stdfuss .stdfuss-hint{opacity:.75;font-size:12px}
+</style>
+<footer class="stdfuss" lang="de">
+<p>Eigenes Unterrichtsmaterial. Kein offizielles Material der Bremer Bildungsbehörde. Dein Fortschritt wird nur in diesem Browser gespeichert.</p>
+<div class="stdfuss-row">
+<button type="button" aria-expanded="false" aria-controls="stdfuss-p1">Datenschutz</button>
+<button type="button" aria-expanded="false" aria-controls="stdfuss-p2">Impressum</button>
+<button type="button" aria-expanded="false" aria-controls="stdfuss-p3">Schriftlizenzen</button>
+</div>
+<div class="stdfuss-panel" id="stdfuss-p1" hidden>
+<ul>
+<li><b>Keine Datensammlung:</b> Diese Seite erhebt keine personenbezogenen Daten. Keine Anmeldung, keine Cookies, kein Tracking, keine Formulare, die Daten verschicken.</li>
+<li><b>Speicherung nur im Browser:</b> Fortschritt und Eingaben werden höchstens im Speicher deines Browsers auf diesem Gerät abgelegt (localStorage) und nicht übertragen. Du kannst sie in den Einstellungen deines Browsers löschen.</li>
+<li><b>Hosting:</b> Die Seite liegt bei GitHub Pages (GitHub, Inc., USA). GitHub verarbeitet beim Aufruf technisch notwendige Daten wie deine IP-Adresse. <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a></li>
+<li><b>Nichts von fremden Servern:</b> Schriften, Skripte und Bilder werden von dieser Seite selbst geladen.</li>
+<li><b>Deine Rechte:</b> Nach der DSGVO hast du das Recht auf Auskunft, Berichtigung, Löschung und Einschränkung der Verarbeitung sowie auf Beschwerde bei einer Datenschutz-Aufsichtsbehörde.</li>
+<li><b>Verantwortlich:</b> siehe Impressum.</li>
+<li><b>Datenschutzbeauftragter:</b> datenschutz nord GmbH, Konsul-Smidt-Straße 88, 28217 Bremen, office@datenschutz-nord.de</li>
+</ul> <a href="datenschutz.html">Ausführliche Fassung</a>
+</div>
+<div class="stdfuss-panel" id="stdfuss-p2" hidden>
+<p><b>Oberschule an der Hermannsburg</b><br>Hermannsburg 32f<br>28259 Bremen<br>E-Mail: 505@schule.bremen.de</p>
+<p>Vertreten durch den Schulleiter Achim Kaschub</p>
+</div>
+<div class="stdfuss-panel" id="stdfuss-p3" hidden>
+<p>Alle Schriften werden von dieser Seite selbst geladen, ohne Verbindung zu Google oder anderen Schriftdiensten. Sie stehen unter der SIL Open Font License 1.1 und wurden nicht verändert.</p>
+<ul><li><b>Carlito</b> – Copyright 2013 The Carlito Project Authors, with Reserved Font Name &quot;Carlito&quot;</li><li><b>Big Shoulders Display</b> – Copyright 2019 The Big Shoulders Project Authors</li><li><b>Big Shoulders Stencil Display</b> – Copyright 2019 The Big Shoulders Project Authors</li><li><b>IBM Plex Sans</b> – Copyright © 2017 IBM Corp. with Reserved Font Name &quot;Plex&quot;</li><li><b>IBM Plex Mono</b> – Copyright © 2017 IBM Corp. with Reserved Font Name &quot;Plex&quot;</li><li><b>Barlow Condensed</b> – Copyright 2017 The Barlow Project Authors</li><li><b>JetBrains Mono</b> – Copyright 2020 The JetBrains Mono Project Authors</li><li><b>Source Sans 3</b> – Copyright 2010-2024 Adobe, with Reserved Font Name &#x27;Source&#x27;. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.</li></ul>
+<a href="assets/fonts/LIZENZEN.txt" target="_blank" rel="noopener">Vollständiger Lizenztext</a> (öffnet in neuem Tab)
+</div>
+<noscript><style>.stdfuss .stdfuss-panel[hidden]{display:block}.stdfuss .stdfuss-row{display:none}</style></noscript>
+<script>(function(){var b=document.querySelectorAll('.stdfuss-row button');b.forEach(function(x){x.addEventListener('click',function(){var on=x.getAttribute('aria-expanded')!=='true';b.forEach(function(y){y.setAttribute('aria-expanded','false');document.getElementById(y.getAttribute('aria-controls')).hidden=true;});if(on){x.setAttribute('aria-expanded','true');document.getElementById(x.getAttribute('aria-controls')).hidden=false;}});});})();</script>
+</footer>
+<script src="assets/vollbild.js"></script>
+</body>
+</html>
