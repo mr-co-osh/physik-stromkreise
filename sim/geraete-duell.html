@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Geräte-Duell</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="../assets/fonts/sim-fonts.css">
+<style>
+/* Layout: Prüfstand-Arena – zwei Gerätekarten treten gegeneinander an, darunter der Prüfablauf (Tipp → Rechnung → Prüfsiegel) */
+:root{
+  --bg:#EEF1EC; --panel:#FFFFFF; --line:#C8D0C6; --line-strong:#8E9A8C;
+  --ink:#1B2420; --muted:#5A665E; --soft:#E3E8E0;
+  --el:#E8B417; --el-ink:#2A1F00; --el-soft:#FBF0CC;
+  --a:#2F7FC6; --a-soft:#DCEAF7; --b:#C2483F; --b-soft:#F6E0DD;
+  --ok:#2A7F55; --ok-soft:#DCEFE3; --bad:#B23A30; --bad-soft:#F6DFDB;
+  --seal:#1F6B47; --icon-fill:#F7F8F4; --icon-stroke:#1B2420;
+  --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111613; --panel:#19201C; --line:#2C3530; --line-strong:#56635A;
+  --ink:#E5EAE3; --muted:#9AA69D; --soft:#222A25;
+  --el:#F2C230; --el-ink:#231A00; --el-soft:#3A3114;
+  --a:#5EA6E8; --a-soft:#17283A; --b:#EC716C; --b-soft:#3A1E1C;
+  --ok:#5CC28C; --ok-soft:#173326; --bad:#F07B6F; --bad-soft:#3B1D1A;
+  --seal:#5CC28C; --icon-fill:#26302A; --icon-stroke:#E5EAE3; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111613; --panel:#19201C; --line:#2C3530; --line-strong:#56635A;
+  --ink:#E5EAE3; --muted:#9AA69D; --soft:#222A25;
+  --el:#F2C230; --el-ink:#231A00; --el-soft:#3A3114;
+  --a:#5EA6E8; --a-soft:#17283A; --b:#EC716C; --b-soft:#3A1E1C;
+  --ok:#5CC28C; --ok-soft:#173326; --bad:#F07B6F; --bad-soft:#3B1D1A;
+  --seal:#5CC28C; --icon-fill:#26302A; --icon-stroke:#E5EAE3; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding-block:18px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:16px}
+header.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:10px}
+h1{font-family:var(--f-display);font-weight:900;font-size:clamp(38px,6vw,64px);line-height:.9;margin:0;text-transform:uppercase;letter-spacing:.01em}
+h1 em{font-style:normal;color:var(--el);-webkit-text-stroke:1.5px var(--ink)}
+.sub{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.score{font-family:var(--f-mono);text-align:right;line-height:1.3}
+.score b{font-family:var(--f-display);font-size:40px;font-weight:900;display:block;font-variant-numeric:tabular-nums}
+.score span{font-size:12px;color:var(--muted)}
+.stages{display:flex;flex-wrap:wrap;gap:8px}
+.stage{font:inherit;font-size:14px;font-weight:600;padding:8px 12px;border:2px solid var(--line-strong);background:var(--panel);color:var(--ink);cursor:pointer;display:flex;gap:8px;align-items:center}
+.stage[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.stage small{font-family:var(--f-mono);font-weight:400;font-size:11.5px;opacity:.8}
+.help{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:12px;align-items:start}
+@media (max-width:760px){.help{grid-template-columns:minmax(0,1fr)}}
+.formula{background:var(--el-soft);border:2px solid var(--el);padding:10px;display:grid;gap:8px}
+.formula .hd,.units .hd{font-family:var(--f-display);font-weight:800;font-size:15px;letter-spacing:.08em;text-transform:uppercase}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:8px}
+.fx{background:var(--panel);border:1.5px solid var(--el);padding:8px 10px;display:grid;gap:2px}
+.fx b{font-family:var(--f-mono);font-size:17px;font-weight:600;overflow-wrap:anywhere}
+.fx span{font-size:12.5px;color:var(--muted);line-height:1.35}
+.units{background:var(--panel);border:1.5px solid var(--line-strong);padding:10px;display:grid;gap:6px}
+.units summary,.formula summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:28px}
+.units summary::-webkit-details-marker,.formula summary::-webkit-details-marker{display:none}
+.units summary::after,.formula summary::after{content:"aufklappen ▾";font-family:var(--f-mono);font-size:12px;color:var(--muted);white-space:nowrap}
+.units[open] summary::after,.formula[open] summary::after{content:"zuklappen ▴"}
+.formula[open] summary,.units[open] summary{margin-bottom:6px}
+.units table{border-collapse:collapse;width:100%;font-size:13px}
+.units th{text-align:left;font-weight:600;padding:4px 8px 4px 0;vertical-align:top}
+.units td{padding:4px 0;font-family:var(--f-mono);font-size:12.5px;vertical-align:top}
+.units tr+tr{border-top:1px solid var(--line)}
+.dots{display:flex;gap:6px;align-items:center;font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.dots i{width:12px;height:12px;border:2px solid var(--line-strong);display:inline-block;border-radius:50%}
+.dots i.done{background:var(--ok);border-color:var(--ok)} .dots i.cur{border-color:var(--ink);background:var(--el)}
+/* Arena */
+.arena{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:stretch}
+@media (max-width:640px){.arena{grid-template-columns:minmax(0,1fr)}.vs{justify-self:center}}
+.card{position:relative;background:var(--panel);border:2px solid var(--line);padding:14px;display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:start;transition:border-color .2s,transform .2s}
+.card.a{border-top:6px solid var(--a)} .card.b{border-top:6px solid var(--b)}
+.card.pick{outline:3px solid var(--el);outline-offset:2px}
+.card .ic{width:96px;height:96px;background:var(--soft);display:grid;place-items:center}
+.card .ic svg{width:80px;height:80px}
+.card .tag{font-family:var(--f-display);font-weight:800;font-size:15px;letter-spacing:.08em;text-transform:uppercase}
+.card.a .tag{color:var(--a)} .card.b .tag{color:var(--b)}
+.card h3{margin:0 0 4px;font-size:18px;line-height:1.25}
+.card dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;font-size:14px}
+.card dt{color:var(--muted)} .card dd{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.card .note{grid-column:1/-1;font-size:13px;color:var(--muted)}
+.vs{align-self:center;font-family:var(--f-display);font-weight:900;font-size:40px;line-height:1;width:64px;height:64px;display:grid;place-items:center;background:var(--el);color:var(--el-ink);transform:rotate(-6deg)}
+.seal{position:absolute;right:-8px;bottom:-14px;width:96px;height:96px;pointer-events:none;color:var(--seal);animation:stamp .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes stamp{from{transform:scale(2.2) rotate(-30deg);opacity:0}to{transform:scale(1) rotate(-12deg);opacity:1}}
+.seal{transform:rotate(-12deg)}
+@media (prefers-reduced-motion: reduce){.seal{animation:none}.card{transition:none}}
+/* Prüfablauf */
+.steps{display:grid;gap:10px}
+.step{background:var(--panel);border:1px solid var(--line);padding:12px 14px;display:grid;gap:10px}
+.step.locked{opacity:.45}
+.step h2{margin:0;font-family:var(--f-display);font-weight:800;font-size:20px;text-transform:uppercase;letter-spacing:.04em;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.step h2 .n{display:inline-grid;place-items:center;width:26px;height:26px;background:var(--ink);color:var(--bg);font-size:16px}
+.step h2 small{font-family:var(--f-body);font-weight:400;font-size:14px;text-transform:none;letter-spacing:0;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px}
+.field{display:grid;gap:4px}
+.field label{font-size:13.5px}
+.field .in{display:flex;gap:6px;align-items:center}
+.field input{font:inherit;font-family:var(--f-mono);font-size:16px;width:100%;min-width:0;padding:8px 10px;border:2px solid var(--line-strong);background:var(--bg);color:var(--ink)}
+.field.ok input{border-color:var(--ok);background:var(--ok-soft)} .field.bad input{border-color:var(--bad);background:var(--bad-soft)}
+.field .unit{font-family:var(--f-mono);font-size:13px;color:var(--muted);white-space:nowrap}
+.field.a label{color:var(--a)} .field.b label{color:var(--b)}
+button{font:inherit;font-weight:600;font-size:15px;padding:9px 16px;border:2px solid var(--ink);background:var(--el);color:var(--el-ink);cursor:pointer}
+button.ghost{background:transparent;color:var(--ink)}
+button.pa{background:var(--a-soft);color:var(--ink);border-color:var(--a)} button.pb{background:var(--b-soft);color:var(--ink);border-color:var(--b)}
+button[disabled]{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--el);outline-offset:2px}
+.fb{font-size:14px;padding:8px 10px;border-left:4px solid var(--line-strong);background:var(--soft)}
+.fb.ok{border-color:var(--ok);background:var(--ok-soft)} .fb.bad{border-color:var(--bad);background:var(--bad-soft)}
+.reasons{display:grid;gap:6px}
+.reasons button{text-align:left;font-weight:500;background:var(--panel);color:var(--ink);border:2px solid var(--line-strong)}
+.reasons button.ok{border-color:var(--ok);background:var(--ok-soft)} .reasons button.bad{border-color:var(--bad);background:var(--bad-soft)}
+/* Vergleichsbalken */
+.compare{display:grid;gap:6px}
+.cbar{display:grid;grid-template-columns:7.5em minmax(0,1fr) 8.5em;gap:8px;align-items:center;font-size:13.5px}
+.cbar .tr{height:18px;background:var(--soft);position:relative}
+.cbar .tr i{position:absolute;inset:0 auto 0 0;transition:width .6s}
+.cbar.a .tr i{background:var(--a)} .cbar.b .tr i{background:var(--b)}
+.cbar .v{font-family:var(--f-mono);font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+.explain{font-size:14px}
+.end{background:var(--panel);border:2px solid var(--ink);padding:18px;display:grid;gap:12px;justify-items:start}
+.end h2{font-family:var(--f-display);font-size:32px;margin:0;text-transform:uppercase}
+.gallery{display:flex;flex-wrap:wrap;gap:8px}
+.gallery .g{display:flex;gap:6px;align-items:center;border:1px solid var(--line);padding:4px 8px;font-size:13px;background:var(--bg)}
+.gallery .g svg{width:28px;height:28px}
+footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+/* Icons */
+symbol .f{fill:var(--icon-fill)} symbol .s{stroke:var(--icon-stroke);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+symbol .fs{fill:var(--icon-fill);stroke:var(--icon-stroke);stroke-width:3;stroke-linejoin:round}
+symbol .y{fill:var(--el)} symbol .k{fill:var(--icon-stroke)} symbol .r{fill:var(--b)} symbol .bl{fill:var(--a)}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-wasserkocher" viewBox="0 0 64 64"><path class="fs" d="M18 20h26l4 32H14z"/><path class="s" d="M44 24c8 0 9 14 2 18"/><path class="s" d="M18 20l-6-4"/><rect class="fs" x="10" y="52" width="42" height="6" rx="2"/><path class="s" d="M24 12c0-4 4-4 4-8M32 12c0-4 4-4 4-8"/><rect class="y" x="21" y="40" width="20" height="4"/></symbol>
+    <symbol id="i-router" viewBox="0 0 64 64"><rect class="fs" x="8" y="34" width="48" height="16" rx="3"/><path class="s" d="M16 34V16M48 34V16"/><circle class="y" cx="18" cy="42" r="2.5"/><circle class="y" cx="26" cy="42" r="2.5"/><circle class="k" cx="34" cy="42" r="2.5"/><path class="s" d="M26 22a9 9 0 0 1 12 0M22 17a15 15 0 0 1 20 0"/></symbol>
+    <symbol id="i-foehn" viewBox="0 0 64 64"><path class="fs" d="M10 18h30a12 12 0 0 1 0 24H24"/><circle class="fs" cx="40" cy="30" r="6"/><path class="fs" d="M22 40l6 0-4 18h-8z"/><path class="s" d="M4 24h2M4 30h3M4 36h2"/><rect class="y" x="23" y="46" width="4" height="4"/></symbol>
+    <symbol id="i-konsole" viewBox="0 0 64 64"><path class="fs" d="M14 22h36c6 0 10 8 10 18 0 8-6 10-10 4l-5-6H19l-5 6c-4 6-10 4-10-4 0-10 4-18 10-18z"/><path class="s" d="M18 28v8M14 32h8"/><circle class="r" cx="44" cy="29" r="2.5"/><circle class="bl" cx="49" cy="34" r="2.5"/><circle class="y" cx="39" cy="34" r="2.5"/></symbol>
+    <symbol id="i-toaster" viewBox="0 0 64 64"><rect class="fs" x="8" y="22" width="48" height="30" rx="8"/><path class="s" d="M20 22v-6h8v6M36 22v-6h8v6"/><path class="s" d="M48 32v10"/><rect class="y" x="14" y="44" width="10" height="3"/></symbol>
+    <symbol id="i-fernseher" viewBox="0 0 64 64"><rect class="fs" x="6" y="12" width="52" height="34" rx="2"/><rect class="bl" x="11" y="17" width="42" height="24" opacity=".35"/><path class="s" d="M24 54h16M32 46v8"/></symbol>
+    <symbol id="i-fernseher-alt" viewBox="0 0 64 64"><rect class="fs" x="6" y="10" width="52" height="40" rx="5"/><rect class="r" x="12" y="16" width="34" height="28" rx="3" opacity=".35"/><circle class="k" cx="52" cy="22" r="2.5"/><circle class="k" cx="52" cy="30" r="2.5"/><path class="s" d="M16 50l-4 6M48 50l4 6"/></symbol>
+    <symbol id="i-staubsauger" viewBox="0 0 64 64"><ellipse class="fs" cx="22" cy="44" rx="14" ry="10"/><path class="s" d="M32 38c10-10 14-20 18-28"/><path class="fs" d="M44 50h16v6H44z"/><path class="s" d="M50 10l2 40"/><circle class="k" cx="14" cy="54" r="3"/><circle class="k" cx="30" cy="54" r="3"/></symbol>
+    <symbol id="i-laptop" viewBox="0 0 64 64"><rect class="fs" x="12" y="14" width="40" height="28" rx="2"/><rect class="bl" x="16" y="18" width="32" height="20" opacity=".35"/><path class="fs" d="M4 46h56l-4 6H8z"/></symbol>
+    <symbol id="i-pc" viewBox="0 0 64 64"><rect class="fs" x="4" y="12" width="36" height="26" rx="2"/><rect class="bl" x="8" y="16" width="28" height="18" opacity=".35"/><path class="s" d="M16 46h12M22 38v8"/><rect class="fs" x="44" y="12" width="16" height="40" rx="2"/><circle class="y" cx="52" cy="20" r="2.5"/><path class="s" d="M48 30h8M48 36h8"/></symbol>
+    <symbol id="i-gluehlampe" viewBox="0 0 64 64"><path class="fs" d="M32 6a18 18 0 0 0-10 33v7h20v-7A18 18 0 0 0 32 6z"/><path class="s" d="M26 34l3-10 3 6 3-6 3 10"/><rect class="fs" x="23" y="46" width="18" height="10" rx="2"/><path class="s" d="M8 22H4M60 22h-4M12 8l-3-3M52 8l3-3"/></symbol>
+    <symbol id="i-led" viewBox="0 0 64 64"><path class="fs" d="M32 6a18 18 0 0 0-10 33v7h20v-7A18 18 0 0 0 32 6z"/><rect class="y" x="24" y="20" width="16" height="10" rx="2"/><path class="s" d="M28 30v8M36 30v8"/><rect class="fs" x="23" y="46" width="18" height="10" rx="2"/></symbol>
+    <symbol id="i-ladegeraet" viewBox="0 0 64 64"><rect class="fs" x="10" y="20" width="22" height="26" rx="3"/><path class="s" d="M16 20v-8M26 20v-8"/><path class="s" d="M32 36c8 0 8 14 16 14"/><rect class="fs" x="44" y="8" width="16" height="30" rx="3"/><path class="s" d="M50 13h4"/><path class="y" d="M53 18l-5 9h4l-2 7 6-10h-4z"/></symbol>
+    <symbol id="i-laptopnetzteil" viewBox="0 0 64 64"><rect class="fs" x="8" y="22" width="30" height="20" rx="3"/><path class="s" d="M38 32h8c6 0 6 14 12 14"/><path class="s" d="M8 32H4"/><rect class="y" x="14" y="28" width="10" height="3"/></symbol>
+    <symbol id="i-mikrowelle" viewBox="0 0 64 64"><rect class="fs" x="4" y="14" width="56" height="36" rx="3"/><rect class="bl" x="9" y="19" width="34" height="26" opacity=".3"/><path class="s" d="M48 22h6M48 28h6M48 34h6"/><circle class="y" cx="51" cy="42" r="3"/></symbol>
+    <symbol id="i-herd" viewBox="0 0 64 64"><rect class="fs" x="4" y="38" width="56" height="18" rx="2"/><ellipse class="r" cx="32" cy="38" rx="16" ry="3" opacity=".6"/><path class="fs" d="M16 18h32v18H16z"/><path class="s" d="M12 22h4M48 22h4"/><path class="s" d="M26 12c0-3 3-3 3-6M35 12c0-3 3-3 3-6"/></symbol>
+    <symbol id="i-kuehlschrank" viewBox="0 0 64 64"><rect class="fs" x="14" y="4" width="36" height="56" rx="3"/><path class="s" d="M14 24h36M20 12v6M20 30v10"/><rect class="bl" x="38" y="8" width="8" height="4" opacity=".6"/></symbol>
+    <symbol id="i-kuehlschrank-alt" viewBox="0 0 64 64"><rect class="fs" x="12" y="4" width="40" height="56" rx="8"/><path class="s" d="M12 22h40M18 12v6M18 30v12"/><path class="s" d="M56 10l4-2M56 18l4 0"/></symbol>
+    <symbol id="i-trockner" viewBox="0 0 64 64"><rect class="fs" x="8" y="6" width="48" height="52" rx="3"/><path class="s" d="M8 16h48"/><circle class="fs" cx="32" cy="38" r="13"/><path class="s" d="M26 36c2-3 4 3 6 0s4 3 6 0"/><circle class="y" cx="46" cy="11" r="2.5"/></symbol>
+    <symbol id="i-wptrockner" viewBox="0 0 64 64"><rect class="fs" x="8" y="6" width="48" height="52" rx="3"/><path class="s" d="M8 16h48"/><circle class="fs" cx="32" cy="38" r="13"/><path class="s" d="M26 36c2-3 4 3 6 0s4 3 6 0"/><text x="14" y="13.5" font-size="7" font-family="IBM Plex Mono,monospace" class="k">WP</text><circle class="y" cx="46" cy="11" r="2.5"/></symbol>
+    <symbol id="i-schreibtisch" viewBox="0 0 64 64"><path class="s" d="M14 58h26M26 58l-6-24 18-16"/><path class="fs" d="M38 10l14 6-6 12-14-6z"/><path class="y" d="M46 28l10 14-18-8z" opacity=".7"/></symbol>
+    <symbol id="i-ledleiste" viewBox="0 0 64 64"><rect class="fs" x="4" y="26" width="56" height="10" rx="5"/><circle class="r" cx="12" cy="31" r="3"/><circle class="y" cx="22" cy="31" r="3"/><circle class="bl" cx="32" cy="31" r="3"/><circle class="r" cx="42" cy="31" r="3"/><circle class="y" cx="52" cy="31" r="3"/><path class="s" d="M12 20v-6M32 20v-8M52 20v-6M22 44v6M42 44v6"/></symbol>
+    <symbol id="i-konsole-aus" viewBox="0 0 64 64"><rect class="fs" x="10" y="16" width="44" height="34" rx="4"/><circle class="s" cx="32" cy="33" r="8"/><path class="s" d="M32 23v8"/></symbol>
+    <symbol id="i-konsole-ruhe" viewBox="0 0 64 64"><rect class="fs" x="10" y="16" width="44" height="34" rx="4"/><circle class="y" cx="46" cy="42" r="3"/><path class="s" d="M24 30a8 8 0 1 0 10-8 6 6 0 0 1-10 8z"/></symbol>
+    <symbol id="seal" viewBox="0 0 120 120"><defs><path id="sealpath" d="M60 60m-44 0a44 44 0 1 1 88 0a44 44 0 1 1-88 0"/></defs>
+      <circle cx="60" cy="60" r="56" fill="none" stroke="currentColor" stroke-width="5"/><circle cx="60" cy="60" r="34" fill="none" stroke="currentColor" stroke-width="2.5"/>
+      <text font-family="Big Shoulders Display,Impact,sans-serif" font-weight="800" font-size="15.5" letter-spacing="2.2" fill="currentColor"><textPath href="#sealpath">GEPRÜFT · SPARSAM · GEPRÜFT · SPARSAM ·</textPath></text>
+      <path d="M60 38l6.5 13.5 14.5 2-10.5 10 2.5 14.5-13-7-13 7 2.5-14.5-10.5-10 14.5-2z" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Geräte-<em>Duell</em></h1>
+      <p class="sub">Zwei Geräte, eine Frage: Welches ist sparsamer? Erst tippen, dann rechnen, dann vergebt ihr das Prüfsiegel – mit der richtigen Begründung.</p>
+    </div>
+    <div class="score" aria-live="polite"><b id="pts">0</b><span>Punkte · <span id="seals">0</span> Siegel</span></div>
+  </header>
+
+  <nav class="stages" id="stages" aria-label="Stufen"></nav>
+  <div class="help">
+    <details class="formula" id="formulas"><summary><span class="hd">Formeln dieser Stufe</span></summary><div class="fgrid" id="formula"></div></details>
+    <details class="units" id="units">
+      <summary><span class="hd">Einheiten und Umrechnung</span></summary>
+      <table>
+        <tr><th>Leistung P</th><td>Watt (W) · 1 kW = 1000 W</td></tr>
+        <tr><th>Energie E</th><td>Wh, kWh, Joule (J)<br>1 kWh = 1000 Wh<br>1 Wh = 3600 J · 1 kWh = 3,6 MJ</td></tr>
+        <tr><th>Zeit t</th><td>1 h = 60 min = 3600 s<br>3 min = 0,05 h · 6 min = 0,1 h<br>15 min = 0,25 h · 30 min = 0,5 h</td></tr>
+        <tr><th>Spannung, Strom</th><td>Volt (V), Ampere (A) · 1 V · 1 A = 1 W</td></tr>
+        <tr><th>Geld, Jahr</th><td>37 ct = 0,37 € · 1 Jahr = 365 Tage = 52 Wochen</td></tr>
+      </table>
+    </details>
+  </div>
+  <div class="dots" id="dots"></div>
+
+  <section id="game">
+    <div class="arena">
+      <article class="card a" id="cardA"></article>
+      <div class="vs" aria-hidden="true">VS</div>
+      <article class="card b" id="cardB"></article>
+    </div>
+  </section>
+
+  <section class="steps" id="steps">
+    <div class="step" id="st1">
+      <h2><span class="n">1</span>Tipp <small id="q-tip"></small></h2>
+      <div class="row"><button class="pa" id="tipA">Gerät A</button><button class="pb" id="tipB">Gerät B</button></div>
+      <div class="fb" id="fb1" hidden></div>
+    </div>
+    <div class="step locked" id="st2">
+      <h2><span class="n">2</span>Rechnen <small>Rechnet im Heft und tragt die Ergebnisse ein. Kommas sind erlaubt.</small></h2>
+      <div class="fields" id="fields"></div>
+      <div class="row"><button id="check" disabled>Prüfen</button><button class="ghost" id="hint" disabled>Hilfe</button></div>
+      <div class="fb" id="fb2" hidden></div>
+      <div class="compare" id="compare" hidden></div>
+    </div>
+    <div class="step locked" id="st3">
+      <h2><span class="n">3</span>Prüfsiegel <small id="q-seal"></small></h2>
+      <div class="row"><button class="pa" id="sealA" disabled>Siegel für A</button><button class="pb" id="sealB" disabled>Siegel für B</button></div>
+      <div class="reasons" id="reasons" hidden></div>
+      <div class="fb" id="fb3" hidden></div>
+      <div class="row"><button id="next" hidden>Nächstes Duell</button></div>
+    </div>
+  </section>
+
+  <section class="end" id="end" hidden>
+    <h2>Stufe geschafft</h2>
+    <p id="endtext"></p>
+    <div class="gallery" id="gallery"></div>
+    <div class="row"><button id="nextStage">Nächste Stufe</button><button class="ghost" id="again">Stufe wiederholen</button></div>
+  </section>
+
+  <footer>Punkte: richtiger Tipp 1 · jede Rechnung 2 (im zweiten Versuch 1) · Siegel mit richtiger Begründung 2. Strompreis 0,37 € pro kWh. Alle Gerätewerte sind gerundete Richtwerte. Begleitmaterial zur Einheit Energie, Physik 9/10 (Extra zu Phase 2).</footer>
+</div>
+
+<script>
+const PRICE=0.37;
+const STAGES=[
+ {name:'Stufe 1',sub:'E = P · t',formula:[{f:'E = P · t',l:'Energie = Leistung · Zeit. W · h ergibt Wh.'},{f:'t in h = min : 60',l:'Minuten erst in Stunden umrechnen.'}],
+  tip:'Welches Gerät braucht <b>mehr</b> Energie?', seal:'Das Siegel bekommt das Gerät, das weniger Energie braucht. Warum?'},
+ {name:'Stufe 2',sub:'P = U · I',formula:[{f:'P = U · I',l:'Leistung = Spannung · Stromstärke. V · A ergibt W.'},{f:'E = P · t',l:'Danach die Energie: W · h ergibt Wh.'}],
+  tip:'Welches Gerät hat die <b>größere</b> Leistung?', seal:'Das Siegel bekommt das Gerät, das weniger Energie braucht. Warum?'},
+ {name:'Stufe 3',sub:'Kosten pro Jahr',formula:[{f:'E = P · t',l:'Energie pro Jahr: W · h pro Tag · 365, dann : 1000 → kWh'},{f:'Kosten = E · Preis',l:'kWh · 0,37 € pro kWh ergibt € pro Jahr.'}],
+  tip:'Welches Gerät kostet im Jahr <b>mehr</b>?', seal:'Das Siegel bekommt das Gerät mit den geringeren Kosten. Warum?'},
+ {name:'★ Stufe 4',sub:'Lohnt sich das?',formula:[{f:'Gesamt = Kauf + Strom',l:'Kaufpreis plus Stromkosten über den ganzen Zeitraum.'},{f:'Amortisation = Mehrpreis : Ersparnis',l:'Ergebnis in Jahren: € geteilt durch € pro Jahr.'},{f:'Kosten = E · Preis',l:'0,37 € pro kWh.'}],
+  tip:'Welches Gerät ist auf lange Sicht <b>teurer</b> oder braucht <b>mehr</b>?', seal:'Wer verdient das Siegel? Begründet.'},
+];
+// Hilfsfunktion: Antwortoptionen
+const R=(t,ok)=>({t,ok});
+const DUELS=[
+ // ---------- Stufe 1
+ {s:0,a:{ic:'wasserkocher',n:'Wasserkocher',d:[['Leistung','2000 W'],['Laufzeit','3 min am Tag']]},
+      b:{ic:'router',n:'WLAN-Router',d:[['Leistung','10 W'],['Laufzeit','24 h am Tag']]},
+  more:'b', f:[{l:'Energie A pro Tag',u:'Wh',v:100},{l:'Energie B pro Tag',u:'Wh',v:240}],
+  hint:'Wasserkocher: 3 min = 0,05 h → 2000 W · 0,05 h. Router: 10 W · 24 h.',
+  win:'a', rs:[R('Er hat die kleinere Leistung.',false),R('Er braucht pro Tag weniger Energie, weil er nur kurz läuft.',true),R('Er ist das modernere Gerät.',false)],
+  ex:'Große Leistung heißt nicht viel Energie: Der Router hat nur 10 W, läuft aber rund um die Uhr. Entscheidend ist Leistung mal Zeit.'},
+ {s:0,a:{ic:'foehn',n:'Föhn',d:[['Leistung','2000 W'],['Laufzeit','6 min am Tag']]},
+      b:{ic:'konsole',n:'Spielkonsole beim Zocken',d:[['Leistung','200 W'],['Laufzeit','2 h am Tag']]},
+  more:'b', f:[{l:'Energie A pro Tag',u:'Wh',v:200},{l:'Energie B pro Tag',u:'Wh',v:400}],
+  hint:'6 min = 0,1 h. Föhn: 2000 W · 0,1 h. Konsole: 200 W · 2 h.',
+  win:'a', rs:[R('Der Föhn braucht pro Tag nur halb so viel Energie wie die Konsole.',true),R('Der Föhn hat die größere Leistung, also gewinnt er.',false),R('Beide brauchen gleich viel.',false)],
+  ex:'Die Konsole hat nur ein Zehntel der Leistung des Föhns, läuft aber 20-mal so lange.'},
+ {s:0,a:{ic:'toaster',n:'Toaster',d:[['Leistung','800 W'],['Laufzeit','3 min am Tag']]},
+      b:{ic:'fernseher',n:'Fernseher',d:[['Leistung','100 W'],['Laufzeit','4 h am Tag']]},
+  more:'b', f:[{l:'Energie A pro Tag',u:'Wh',v:40},{l:'Energie B pro Tag',u:'Wh',v:400}],
+  hint:'3 min = 0,05 h. Toaster: 800 W · 0,05 h. Fernseher: 100 W · 4 h.',
+  win:'a', rs:[R('Der Toaster braucht pro Tag ein Zehntel der Energie des Fernsehers.',true),R('Der Fernseher hat die kleinere Leistung.',false),R('Toaster sind immer sparsam.',false)],
+  ex:'Geräte mit großer Leistung, die nur kurz laufen (Toaster, Föhn, Wasserkocher), sind oft keine großen Stromfresser.'},
+ {s:0,a:{ic:'staubsauger',n:'Staubsauger',d:[['Leistung','700 W'],['Laufzeit','15 min am Tag']]},
+      b:{ic:'laptop',n:'Laptop',d:[['Leistung','50 W'],['Laufzeit','3 h am Tag']]},
+  more:'a', f:[{l:'Energie A pro Tag',u:'Wh',v:175},{l:'Energie B pro Tag',u:'Wh',v:150}],
+  hint:'15 min = 0,25 h. Staubsauger: 700 W · 0,25 h. Laptop: 50 W · 3 h.',
+  win:'b', rs:[R('Der Laptop braucht etwas weniger Energie pro Tag.',true),R('Der Laptop braucht viel weniger Energie, weil seine Leistung klein ist.',false),R('Der Staubsauger läuft kürzer, also gewinnt er.',false)],
+  ex:'Knapp! 175 Wh gegen 150 Wh. Hier lohnt sich genaues Rechnen statt Schätzen.'},
+ // ---------- Stufe 2
+ {s:1,a:{ic:'gluehlampe',n:'Glühlampe',d:[['Spannung','230 V'],['Stromstärke','0,26 A'],['Laufzeit','4 h am Tag']]},
+      b:{ic:'led',n:'LED-Lampe (gleich hell)',d:[['Spannung','230 V'],['Stromstärke','0,035 A'],['Laufzeit','4 h am Tag']]},
+  more:'a', f:[{l:'Leistung A',u:'W',v:59.8},{l:'Leistung B',u:'W',v:8.05},{l:'Energie A pro Tag',u:'Wh',v:239.2},{l:'Energie B pro Tag',u:'Wh',v:32.2}],
+  hint:'P = 230 V · 0,26 A bzw. 230 V · 0,035 A. Danach E = P · 4 h.',
+  win:'b', rs:[R('Gleich viel Licht mit einem Siebtel der Energie.',true),R('Die LED hat die höhere Spannung.',false),R('Die LED leuchtet heller.',false)],
+  ex:'Gleicher Nutzen, viel weniger Energie: Das ist Energieeffizienz. Die Glühlampe wandelt den Großteil in thermische Energie um.'},
+ {s:1,a:{ic:'ladegeraet',n:'Handy-Ladegerät',d:[['Spannung','5 V'],['Stromstärke','2 A'],['Ladezeit','2 h am Tag']]},
+      b:{ic:'laptopnetzteil',n:'Laptop-Netzteil (USB-C)',d:[['Spannung','20 V'],['Stromstärke','3 A'],['Ladezeit','1 h am Tag']]},
+  more:'b', f:[{l:'Leistung A',u:'W',v:10},{l:'Leistung B',u:'W',v:60},{l:'Energie A pro Tag',u:'Wh',v:20},{l:'Energie B pro Tag',u:'Wh',v:60}],
+  hint:'P = U · I: 5 V · 2 A und 20 V · 3 A. Danach mal Ladezeit.',
+  win:'a', rs:[R('Das Handy-Ladegerät braucht pro Tag weniger Energie.',true),R('Es hat die kleinere Stromstärke, das allein reicht.',false),R('Es lädt länger, also ist es sparsamer.',false)],
+  ex:'Spannung und Stromstärke zusammen bestimmen die Leistung. 2 A bei 5 V sind viel weniger als 3 A bei 20 V.'},
+ {s:1,a:{ic:'mikrowelle',n:'Mikrowelle: Suppe aufwärmen',d:[['Spannung','230 V'],['Stromstärke','5 A'],['Dauer','4 min']]},
+      b:{ic:'herd',n:'Herdplatte: gleiche Suppe',d:[['Spannung','230 V'],['Stromstärke','6,5 A'],['Dauer','10 min']]},
+  more:'b', f:[{l:'Leistung A',u:'W',v:1150},{l:'Leistung B',u:'W',v:1495},{l:'Energie A',u:'Wh',v:76.7},{l:'Energie B',u:'Wh',v:249.2}],
+  hint:'P = 230 V · I. Zeit in Stunden: 4 min = 4/60 h, 10 min = 10/60 h.',
+  win:'a', rs:[R('Gleicher Nutzen (warme Suppe) mit weniger Energie.',true),R('Die Mikrowelle hat die kleinere Spannung.',false),R('Mikrowellen sind immer sparsamer als Herde.',false)],
+  ex:'Die Mikrowelle erwärmt direkt das Essen. Bei der Herdplatte werden Platte, Topf und Küche mit erwärmt. Bei großen Mengen kann das anders aussehen – immer den gleichen Nutzen vergleichen.'},
+ {s:1,a:{ic:'fernseher-alt',n:'Alter Plasma-Fernseher',d:[['Spannung','230 V'],['Stromstärke','1,3 A'],['Laufzeit','3 h am Tag']]},
+      b:{ic:'fernseher',n:'Neuer LED-Fernseher',d:[['Spannung','230 V'],['Stromstärke','0,4 A'],['Laufzeit','3 h am Tag']]},
+  more:'a', f:[{l:'Leistung A',u:'W',v:299},{l:'Leistung B',u:'W',v:92},{l:'Energie A pro Tag',u:'Wh',v:897},{l:'Energie B pro Tag',u:'Wh',v:276}],
+  hint:'230 V · 1,3 A und 230 V · 0,4 A. Danach mal 3 h.',
+  win:'b', rs:[R('Gleiche Fernsehzeit mit weniger als einem Drittel der Energie.',true),R('Der neue Fernseher hat ein größeres Bild.',false),R('Er braucht weniger Spannung.',false)],
+  ex:'Beide hängen an 230 V. Den Unterschied macht die Stromstärke – und damit die Leistung.'},
+ // ---------- Stufe 3
+ {s:2,a:{ic:'kuehlschrank-alt',n:'Alter Kühlschrank',d:[['Verbrauch','330 kWh pro Jahr']]},
+      b:{ic:'kuehlschrank',n:'Neuer Kühlschrank (Klasse C)',d:[['Verbrauch','150 kWh pro Jahr']]},
+  more:'a', f:[{l:'Kosten A pro Jahr',u:'€',v:122.10},{l:'Kosten B pro Jahr',u:'€',v:55.50}],
+  hint:'Kosten = kWh · 0,37 €.',
+  win:'b', rs:[R('Er kostet im Jahr rund 67 € weniger Strom.',true),R('Er hat ein Energielabel, der alte nicht.',false),R('Er ist kleiner.',false)],
+  ex:'Die Angabe kWh pro Jahr steht direkt auf dem Energielabel. Damit lassen sich Kosten sofort vergleichen.'},
+ {s:2,a:{ic:'konsole-ruhe',n:'Konsole im Ruhemodus',d:[['Leistung','1,2 W'],['Dauer','22 h am Tag']]},
+      b:{ic:'konsole-aus',n:'Konsole ganz aus',d:[['Leistung','0,3 W'],['Dauer','22 h am Tag']]},
+  more:'a', f:[{l:'Kosten A pro Jahr',u:'€',v:3.57},{l:'Kosten B pro Jahr',u:'€',v:0.89}],
+  hint:'E = W · 22 h · 365 → in kWh umrechnen (durch 1000) → mal 0,37 €.',
+  win:'b', rs:[R('Ganz aus kostet weniger – aber der Unterschied ist nur etwa 2,70 € im Jahr.',true),R('Der Ruhemodus kostet über 100 € im Jahr.',false),R('Ganz aus braucht gar keine Energie.',false)],
+  ex:'Standby lohnt sich zu vermeiden, ist aber klein gegen die Spielzeit selbst (rund 80 € im Jahr bei 2 h am Tag).'},
+ {s:2,a:{ic:'trockner',n:'Kondenstrockner',d:[['pro Ladung','2,5 kWh'],['Nutzung','2 Ladungen pro Woche']]},
+      b:{ic:'wptrockner',n:'Wärmepumpentrockner',d:[['pro Ladung','1,2 kWh'],['Nutzung','2 Ladungen pro Woche']]},
+  more:'a', f:[{l:'Kosten A pro Jahr',u:'€',v:96.20},{l:'Kosten B pro Jahr',u:'€',v:46.18}],
+  hint:'kWh pro Ladung · 2 · 52 Wochen · 0,37 €.',
+  win:'b', rs:[R('Er trocknet die gleiche Wäsche für etwa die Hälfte der Kosten.',true),R('Er braucht keinen Strom, weil eine Wärmepumpe arbeitet.',false),R('Er trocknet schneller.',false)],
+  ex:'Auch die Wärmepumpe braucht elektrische Energie – aber deutlich weniger für denselben Nutzen. Noch besser: die Wäscheleine.'},
+ {s:2,a:{ic:'pc',n:'Computer mit Monitor',d:[['Leistung','150 W'],['Laufzeit','3 h am Tag']]},
+      b:{ic:'laptop',n:'Laptop',d:[['Leistung','50 W'],['Laufzeit','3 h am Tag']]},
+  more:'a', f:[{l:'Kosten A pro Jahr',u:'€',v:60.77},{l:'Kosten B pro Jahr',u:'€',v:20.26}],
+  hint:'W · 3 h · 365 → kWh → mal 0,37 €.',
+  win:'b', rs:[R('Gleiche Nutzungszeit für ein Drittel der Kosten.',true),R('Laptops brauchen keinen Strom, wenn der Akku voll ist.',false),R('Der Laptop ist leichter.',false)],
+  ex:'Für Hausaufgaben und Surfen reicht oft der Laptop. Für aufwendige Spiele braucht man mehr Leistung – dann ist der Nutzen nicht gleich.'},
+ // ---------- Stufe 4
+ {s:3,a:{ic:'kuehlschrank-alt',n:'Alten Kühlschrank behalten',d:[['Kaufpreis','0 €'],['Verbrauch','330 kWh pro Jahr'],['Zeitraum','15 Jahre']]},
+      b:{ic:'kuehlschrank',n:'Neuen Kühlschrank kaufen',d:[['Kaufpreis','700 €'],['Verbrauch','150 kWh pro Jahr'],['Zeitraum','15 Jahre']]},
+  more:'a', f:[{l:'Gesamtkosten A in 15 Jahren',u:'€',v:1831.50},{l:'Gesamtkosten B in 15 Jahren',u:'€',v:1532.50}],
+  hint:'A: 330 kWh · 15 · 0,37 €. B: 700 € + 150 kWh · 15 · 0,37 €.',
+  win:'b', rs:[R('Trotz Kaufpreis rund 300 € günstiger in 15 Jahren – und weniger CO₂.',true),R('Neue Geräte sind immer günstiger.',false),R('Der neue ist schon im ersten Jahr günstiger.',false)],
+  ex:'Der Mehrpreis zahlt sich erst nach etwa 10,5 Jahren aus. Wer nur 5 Jahre rechnet, kommt zu einem anderen Ergebnis – der Zeitraum gehört zur Begründung.'},
+ {s:3,a:{ic:'schreibtisch',n:'Alte Halogen-Schreibtischlampe',d:[['Leistung','40 W'],['Laufzeit','3 h am Tag']]},
+      b:{ic:'ledleiste',n:'Neue LED-Lichterleiste',d:[['Leistung','15 W'],['Laufzeit','12 h am Tag („ist ja sparsam“)']]},
+  more:'b', f:[{l:'Energie A pro Jahr',u:'kWh',v:43.8},{l:'Energie B pro Jahr',u:'kWh',v:65.7}],
+  hint:'W · h · 365, dann durch 1000.',
+  win:'a', rs:[R('Die Halogenlampe braucht im Jahr weniger Energie, weil die LED-Leiste viel länger läuft.',true),R('Die LED-Leiste hat die kleinere Leistung, also gewinnt sie.',false),R('LEDs sind immer die bessere Wahl.',false)],
+  ex:'Das nennt man Rebound-Effekt: Ein effizientes Gerät wird mehr genutzt, und die Ersparnis ist weg. Effizient heißt nicht automatisch sparsam.'},
+ {s:3,a:{ic:'gluehlampe',n:'Glühlampen (40 W)',d:[['Preis','3 € pro Stück'],['Lebensdauer','1000 h'],['für','15 000 h Licht']]},
+      b:{ic:'led',n:'LED-Lampe (5 W)',d:[['Preis','5 €'],['Lebensdauer','15 000 h'],['für','15 000 h Licht']]},
+  more:'a', f:[{l:'Gesamtkosten A',u:'€',v:267},{l:'Gesamtkosten B',u:'€',v:32.75}],
+  hint:'A: 15 Lampen · 3 € + 40 W · 15 000 h → kWh → · 0,37 €. B: 5 € + 5 W · 15 000 h → kWh → · 0,37 €.',
+  win:'b', rs:[R('Über die ganze Lebensdauer kostet sie nur etwa ein Achtel.',true),R('Sie ist im Laden billiger.',false),R('Sie leuchtet heller.',false)],
+  ex:'Die LED ist im Laden teurer, aber Strom ist der größte Kostenblock.'},
+ {s:3,a:{ic:'trockner',n:'Kondenstrockner',d:[['Kaufpreis','450 €'],['Verbrauch','260 kWh pro Jahr']]},
+      b:{ic:'wptrockner',n:'Wärmepumpentrockner',d:[['Kaufpreis','750 €'],['Verbrauch','125 kWh pro Jahr']]},
+  more:'a', f:[{l:'Ersparnis von B pro Jahr',u:'€',v:49.95},{l:'Mehrpreis hat sich bezahlt nach',u:'Jahren',v:6.0}],
+  hint:'Ersparnis = (260 − 125) kWh · 0,37 €. Amortisation = 300 € : Ersparnis.', nobar:true,
+  win:'b', rs:[R('Der Mehrpreis ist nach etwa 6 Jahren wieder drin, der Trockner hält länger.',true),R('Er ist billiger im Laden.',false),R('Er spart schon im ersten Jahr mehr als er kostet.',false)],
+  ex:'Ein Trockner hält meist 10 Jahre oder länger. Danach spart der Wärmepumpentrockner jedes Jahr weiter.'},
+];
+
+let stage=0, idx=0, pts=0, sealsCount=0; const gallery=[];
+let cur, tipDone, tries, calcDone, sealDone, hintUsed;
+const $=id=>document.getElementById(id);
+const fmt=(x,d)=>x.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const icon=(n,cls='')=>`<svg class="ico ${cls}" viewBox="0 0 64 64" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+
+function renderStages(){
+  $('stages').innerHTML=STAGES.map((s,i)=>`<button class="stage" aria-pressed="${i===stage}" data-i="${i}">${s.name}<small>${s.sub}</small></button>`).join('');
+  $('stages').querySelectorAll('button').forEach(b=>b.onclick=()=>{stage=+b.dataset.i;idx=0;startStage();});
+}
+function list(){return DUELS.filter(d=>d.s===stage);}
+function card(side,o){
+  return `<div class="ic">${icon(o.ic)}</div><div><div class="tag">Gerät ${side.toUpperCase()}</div><h3>${o.n}</h3><dl>${o.d.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl></div>`;
+}
+function startStage(){ renderStages(); $('formula').innerHTML=STAGES[stage].formula.map(x=>`<div class="fx"><b>${x.f}</b><span>${x.l}</span></div>`).join(''); $('end').hidden=true; $('game').hidden=false; $('steps').hidden=false; load(); }
+function dots(){ const n=list().length; $('dots').innerHTML='Duell '+(idx+1)+' von '+n+' '+Array.from({length:n},(_,i)=>`<i class="${i<idx?'done':i===idx?'cur':''}"></i>`).join(''); }
+function lock(id,l){$(id).classList.toggle('locked',l);}
+function load(){
+  cur=list()[idx]; tipDone=false; calcDone=false; sealDone=false; hintUsed=false; tries={};
+  $('cardA').innerHTML=card('a',cur.a); $('cardB').innerHTML=card('b',cur.b);
+  $('cardA').classList.remove('pick'); $('cardB').classList.remove('pick');
+  $('q-tip').innerHTML=STAGES[stage].tip; $('q-seal').innerHTML=STAGES[stage].seal;
+  ['fb1','fb2','fb3','compare','reasons','next'].forEach(i=>$(i).hidden=true);
+  $('tipA').disabled=$('tipB').disabled=false;
+  $('fields').innerHTML=cur.f.map((f,i)=>`<div class="field ${i%2===0?'a':'b'}" id="fd${i}"><label for="in${i}">${f.l}</label><div class="in"><input id="in${i}" inputmode="decimal" autocomplete="off" disabled><span class="unit">${f.u}</span></div></div>`).join('');
+  $('check').disabled=$('hint').disabled=true; $('sealA').disabled=$('sealB').disabled=true;
+  lock('st2',true); lock('st3',true); dots();
+}
+function addPts(n){pts+=n; $('pts').textContent=pts;}
+function fb(id,ok,html){const e=$(id); e.hidden=false; e.className='fb '+(ok===null?'':ok?'ok':'bad'); e.innerHTML=html;}
+function tip(side){
+  if(tipDone) return; tipDone=true; $('tipA').disabled=$('tipB').disabled=true;
+  $(side==='a'?'cardA':'cardB').classList.add('pick');
+  const ok=side===cur.more; if(ok) addPts(1);
+  fb('fb1',ok, ok?'Guter Riecher! +1 Punkt. Jetzt rechnet nach.':'Euer Bauchgefühl sagt etwas anderes als die Rechnung? Rechnet nach – dann wisst ihr es.');
+  lock('st2',false); cur.f.forEach((_,i)=>$('in'+i).disabled=false); $('check').disabled=$('hint').disabled=false; $('in0').focus({preventScroll:true});
+}
+function parse(v){v=v.trim().replace(/\s/g,'').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.'); return parseFloat(v);}
+function check(){
+  let all=true;
+  cur.f.forEach((f,i)=>{
+    const fd=$('fd'+i); if(fd.classList.contains('ok')) return;
+    const x=parse($('in'+i).value); const tol=Math.max(Math.abs(f.v)*0.03,0.02);
+    const ok=isFinite(x)&&Math.abs(x-f.v)<=tol;
+    tries[i]=(tries[i]||0)+1;
+    fd.classList.toggle('ok',ok); fd.classList.toggle('bad',!ok);
+    if(ok){ addPts(tries[i]===1?2:1); $('in'+i).disabled=true; } else all=false;
+  });
+  if(all){ calcDone=true; $('check').disabled=$('hint').disabled=true;
+    fb('fb2',true,'Alle Rechnungen stimmen.'); if(!cur.nobar) showCompare(); lock('st3',false); $('sealA').disabled=$('sealB').disabled=false; }
+  else fb('fb2',false,'Rot markierte Felder stimmen noch nicht. Prüft Einheiten (min → h, Wh → kWh) und rechnet erneut. Mit „Hilfe“ seht ihr den Rechenweg.');
+}
+function showCompare(){
+  const pairs=[]; for(let i=0;i<cur.f.length;i+=2) pairs.push([cur.f[i],cur.f[i+1]]);
+  const p=pairs[pairs.length-1]; const max=Math.max(p[0].v,p[1].v);
+  const d=p[0].u==='€'||p[0].u==='Jahren'?2:(Math.max(p[0].v,p[1].v)<100?1:0);
+  $('compare').hidden=false;
+  $('compare').innerHTML=`<div class="label" style="font-size:13px;color:var(--muted)">${p[0].l.replace(/ A( |$)/,' ')} im Vergleich</div>`+
+    [['a',cur.a.n,p[0].v],['b',cur.b.n,p[1].v]].map(([s,n,v])=>`<div class="cbar ${s}"><span>Gerät ${s.toUpperCase()}</span><span class="tr"><i style="width:0"></i></span><span class="v">${fmt(v,d)} ${p[0].u}</span></div>`).join('');
+  requestAnimationFrame(()=>{const is=$('compare').querySelectorAll('.tr i'); is[0].style.width=(p[0].v/max*100)+'%'; is[1].style.width=(p[1].v/max*100)+'%';});
+}
+function seal(side){
+  if(sealDone) return;
+  if(side!==cur.win){ fb('fb3',false,'Prüft eure Rechnung noch einmal: Welches Gerät erfüllt die Frage besser? Ihr dürft neu wählen.'); return; }
+  $('sealA').disabled=$('sealB').disabled=true;
+  const host=$(side==='a'?'cardA':'cardB');
+  host.insertAdjacentHTML('beforeend','<svg class="seal" viewBox="0 0 120 120" aria-label="Prüfsiegel"><use href="#seal"/></svg>');
+  $('fb3').hidden=true;
+  const rs=$('reasons'); rs.hidden=false;
+  const order=cur.rs.map((r,i)=>i).sort(()=>Math.random()-.5);
+  rs.innerHTML='<div style="font-size:14px">Warum bekommt Gerät '+side.toUpperCase()+' das Siegel?</div>'+order.map(i=>`<button data-i="${i}">${cur.rs[i].t}</button>`).join('');
+  let first=true;
+  rs.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    if(sealDone) return; const r=cur.rs[+b.dataset.i];
+    if(r.ok){ b.classList.add('ok'); sealDone=true; if(first) addPts(2); else addPts(1);
+      sealsCount++; $('seals').textContent=sealsCount; gallery.push(cur[cur.win]);
+      fb('fb3',true,(first?'+2 Punkte. ':'+1 Punkt. ')+cur.ex); $('next').hidden=false;
+      $('next').textContent= idx<list().length-1?'Nächstes Duell':'Stufe abschließen'; }
+    else { b.classList.add('bad'); first=false; }
+  });
+}
+function next(){
+  if(idx<list().length-1){ idx++; load(); window.scrollTo({top:0,behavior:'smooth'}); }
+  else end();
+}
+function end(){
+  $('game').hidden=true; $('steps').hidden=true; $('end').hidden=false; dots();
+  $('endtext').textContent=`${STAGES[stage].name} ist geschafft. Ihr habt jetzt ${pts} Punkte und ${sealsCount} Prüfsiegel. Notiert eure Punktzahl im Heft.`;
+  $('gallery').innerHTML=gallery.map(o=>`<span class="g">${icon(o.ic)}${o.n}</span>`).join('');
+  $('nextStage').hidden= stage>=STAGES.length-1;
+}
+$('tipA').onclick=()=>tip('a'); $('tipB').onclick=()=>tip('b');
+$('check').onclick=check;
+$('hint').onclick=()=>{ hintUsed=true; fb('fb2',null,'<b>Rechenweg:</b> '+cur.hint); };
+$('sealA').onclick=()=>seal('a'); $('sealB').onclick=()=>seal('b');
+$('next').onclick=next;
+$('nextStage').onclick=()=>{stage=Math.min(stage+1,STAGES.length-1); idx=0; startStage(); window.scrollTo({top:0});};
+$('again').onclick=()=>{idx=0; startStage();};
+document.addEventListener('keydown',e=>{ if(e.key==='Enter' && e.target.tagName==='INPUT') check(); });
+startStage();
+</script>
+
+<script src="../assets/vollbild.js"></script>
+</html>
+
+<!-- Lernseite: Zurück-Leiste und Schloss (Simulation selbst unverändert) -->
+<script>window.SIM_ID = 'geraete-duell';</script>
+<script src="../data/codes.js"></script>
+<script src="../assets/lock.js"></script>
+
+<!-- STANDARDS.md Abschnitt 4: Seitenfuß -->
+<style>
+.stdfuss{display:block;clear:both;margin:32px 0 0;padding:14px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));border-top:1px solid rgba(128,128,128,.35);font:12.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:inherit;text-align:left;position:relative;z-index:1}
+.stdfuss *{box-sizing:border-box}
+.stdfuss p{margin:0 0 8px;max-width:72ch}
+.stdfuss .stdfuss-row{display:flex;flex-wrap:wrap;gap:0 24px;align-items:center}
+.stdfuss .stdfuss-row button{font:inherit;font-weight:700;color:inherit;background:none;border:0;padding:5px 0;min-height:30px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.stdfuss .stdfuss-row button::before{content:"";border:4.5px solid transparent;border-left:6px solid currentColor;border-right:0;transition:transform .15s}
+.stdfuss .stdfuss-row button[aria-expanded="true"]::before{transform:rotate(90deg)}
+.stdfuss .stdfuss-row button[aria-expanded="true"]{text-decoration:underline;text-underline-offset:3px}
+.stdfuss .stdfuss-panel{max-width:72ch;margin-top:4px}
+.stdfuss .stdfuss-panel[hidden]{display:none}
+.stdfuss ul{margin:4px 0 8px;padding-left:20px}
+.stdfuss li{margin:3px 0}
+.stdfuss a{color:inherit;text-decoration:underline}
+.stdfuss .stdfuss-hint{opacity:.75;font-size:12px}
+</style>
+<footer class="stdfuss" lang="de">
+<p>Eigenes Unterrichtsmaterial. Kein offizielles Material der Bremer Bildungsbehörde. Dein Fortschritt wird nur in diesem Browser gespeichert.</p>
+<div class="stdfuss-row">
+<button type="button" aria-expanded="false" aria-controls="stdfuss-p1">Datenschutz</button>
+<button type="button" aria-expanded="false" aria-controls="stdfuss-p2">Impressum</button>
+<button type="button" aria-expanded="false" aria-controls="stdfuss-p3">Schriftlizenzen</button>
+</div>
+<div class="stdfuss-panel" id="stdfuss-p1" hidden>
+<ul>
+<li><b>Keine Datensammlung:</b> Diese Seite erhebt keine personenbezogenen Daten. Keine Anmeldung, keine Cookies, kein Tracking, keine Formulare, die Daten verschicken.</li>
+<li><b>Speicherung nur im Browser:</b> Fortschritt und Eingaben werden höchstens im Speicher deines Browsers auf diesem Gerät abgelegt (localStorage) und nicht übertragen. Du kannst sie in den Einstellungen deines Browsers löschen.</li>
+<li><b>Hosting:</b> Die Seite liegt bei GitHub Pages (GitHub, Inc., USA). GitHub verarbeitet beim Aufruf technisch notwendige Daten wie deine IP-Adresse. <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a></li>
+<li><b>Nichts von fremden Servern:</b> Schriften, Skripte und Bilder werden von dieser Seite selbst geladen.</li>
+<li><b>Deine Rechte:</b> Nach der DSGVO hast du das Recht auf Auskunft, Berichtigung, Löschung und Einschränkung der Verarbeitung sowie auf Beschwerde bei einer Datenschutz-Aufsichtsbehörde.</li>
+<li><b>Verantwortlich:</b> siehe Impressum.</li>
+<li><b>Datenschutzbeauftragter:</b> datenschutz nord GmbH, Konsul-Smidt-Straße 88, 28217 Bremen, office@datenschutz-nord.de</li>
+</ul> <a href="../datenschutz.html">Ausführliche Fassung</a>
+</div>
+<div class="stdfuss-panel" id="stdfuss-p2" hidden>
+<p><b>Oberschule an der Hermannsburg</b><br>Hermannsburg 32f<br>28259 Bremen<br>E-Mail: 505@schule.bremen.de</p>
+<p>Vertreten durch den Schulleiter Achim Kaschub</p>
+</div>
+<div class="stdfuss-panel" id="stdfuss-p3" hidden>
+<p>Alle Schriften werden von dieser Seite selbst geladen, ohne Verbindung zu Google oder anderen Schriftdiensten. Sie stehen unter der SIL Open Font License 1.1 und wurden nicht verändert.</p>
+<ul><li><b>Carlito</b> – Copyright 2013 The Carlito Project Authors, with Reserved Font Name &quot;Carlito&quot;</li><li><b>Big Shoulders Display</b> – Copyright 2019 The Big Shoulders Project Authors</li><li><b>Big Shoulders Stencil Display</b> – Copyright 2019 The Big Shoulders Project Authors</li><li><b>IBM Plex Sans</b> – Copyright © 2017 IBM Corp. with Reserved Font Name &quot;Plex&quot;</li><li><b>IBM Plex Mono</b> – Copyright © 2017 IBM Corp. with Reserved Font Name &quot;Plex&quot;</li><li><b>Barlow Condensed</b> – Copyright 2017 The Barlow Project Authors</li><li><b>JetBrains Mono</b> – Copyright 2020 The JetBrains Mono Project Authors</li><li><b>Source Sans 3</b> – Copyright 2010-2024 Adobe, with Reserved Font Name &#x27;Source&#x27;. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.</li></ul>
+<a href="../assets/fonts/LIZENZEN.txt" target="_blank" rel="noopener">Vollständiger Lizenztext</a> (öffnet in neuem Tab)
+</div>
+<noscript><style>.stdfuss .stdfuss-panel[hidden]{display:block}.stdfuss .stdfuss-row{display:none}</style></noscript>
+<script>(function(){var b=document.querySelectorAll('.stdfuss-row button');b.forEach(function(x){x.addEventListener('click',function(){var on=x.getAttribute('aria-expanded')!=='true';b.forEach(function(y){y.setAttribute('aria-expanded','false');document.getElementById(y.getAttribute('aria-controls')).hidden=true;});if(on){x.setAttribute('aria-expanded','true');document.getElementById(x.getAttribute('aria-controls')).hidden=false;}});});})();</script>
+</footer>
